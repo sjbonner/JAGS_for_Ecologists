@@ -1,0 +1,3 @@
+model{
+  y ~ dnorm(0,1)
+}
