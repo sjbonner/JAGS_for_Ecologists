@@ -1,3 +1,15 @@
 model{
-  y ~ dnorm(0,1)
+  # Parameters  
+  mu1 <- 5
+  mu2 <- 10
+  sigmasq <- 2
+  
+  # Distributions
+  for(j in 1:10){
+    y1[j] ~ dnorm(mu1,1/sigmasq)
+  }
+  
+  for(j in 1:15){
+    y2[j] ~ dnorm(mu1,1/sigmasq)
+  }
 }
