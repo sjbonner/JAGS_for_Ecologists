@@ -1,0 +1,76 @@
+---
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    toc_depth: 3
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{graphicx}
+title: "OCTWS -- March 24, 2022"
+geometry: margin=1in
+fontsize: 11pt
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+```{r setup, include=FALSE, purl = FALSE}
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE)
+
+## Load packages 
+library(tidyverse)
+library(knitr)
+```
+
+# Introduction to Bayesian Inference with JAGS for Ecologists {.tabset}
+
+## Introducing JAGS {.tabset}
+
+At it's heart, JAGS is a software package that provides methods to sample from complex probability distributions. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
+
+### Directed Acyclic Graphs
+
+Much of the syntax for JAGS will look familiar if you have programmed in R before. However, what JAGS is doing is fundamentally different. R is a functional programming language meaning that it works by providing input to functions that then return output. Some functions may be very complicated, but they are all essentially black-boxes that take some numbers, do some calculations, and spit some new numbers out the other end. 
+
+The purpose of the JAGS language is to define relationship between the variables in a statistical model. Behind the scenes, JAGS is constructing a graph that describes how the variables are connected. The variables are referred to as nodes in the graph, and the nodes belong to one of two types: deterministic or stochastic. A node is deterministic if the value of the node is unique given its inputs. For example, a node that adds to values is deterministic because it will always produce the same sum from the same input. A node is stochastic if its inputs define a distribution from which a value can be drawn. For example, a stochastic node might define a normal distribution which depends on its mean and variance. Each time the sampler is run JAGS will draw a value from the distribution at random, and so the value of the node will change even if the mean and variance supplied are the same. 
+
+There are also some conditions which the final graph must satisfy. It must be directed and it must be acyclic. Directed simply means that there is a direction to each of the connections in the graph. Each node accepts input from some nodes and passes output on to other nodes. The nodes providing input are called parents and the nodes accepting output are called children. In the example of the normal distribution, the mean and variance are parents and the stochastic node is their child. Acyclic means that you can't ever get back to the same node by following connections in the correct direction. We say that the final graph is a Directed Acyclic Graph or DAG short.
+
+#### Example
+
+Consider the problem of a two-sample $t$-test. We assume that we have $n$ observations from one group and $m$ from a second group such that the observations are normally distributed with the same variance but possibly a different mean. I will let $Y_{ij}$ denote the $j$-th observation from group $i$, $\mu_i$ the mean for group $i$, and $\sigma^2$ the common variance. The DAG might be drawn like this:
+
+
+
+### Basic JAGS syntax
+
+### Running JAGS from R
+
+
+## Conditional Distributions
+
+When you run JAGS you will supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes. That is, it samples from the distribution a node given the current values of both its parents and its children. 
+
+As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 and the largest is 12. the probability of the different outcomes are given in the following table:
+```{r}
+## Craps probabilities
+craps <- tibble(Outcome = as.integer(2:12),
+                Probability = c(1,2,3,4,5,6,5,4,3,2,1)/36)
+
+t(craps) %>%
+  kable(digits = 3)
+```
+Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the marginal probability of the outcome 5 is .111 and the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. In this case, the conditional probability is higher than the marginal probability. 
+
+We could also ask about the conditional probability for the values of the two die together given that the outcome (their sum) is 5. There are four different configurations of the two die that produce the outcome 5: 1 and 4, 2 and 3, 3 and 2, and 4 and 1. Hence, the probability of each of these configurations given that the sum is 5 is 1/4=.25. 
+
+## Markov chain Monte Carlo
+
+## Initial Values and Burning
+
+Recall that JAGS samples from the conditional distribution of a node given the current values of its parents and children. This makes sense once all of the nodes have values, but how are the first values generated? The answer is that JAGS generates initial values for each of the unobserved nodes. It tries to do so in a sensible way, but it can be difficult to sample consistent values for all of the nodes in a complex model. 
+
+One thing this means is that the initial values may not match well with the posterior distribution. The theory of MCMC says that by resampling the values of the unobserved nodes from their conditional distributions will eventually lead to samples that match with the posterior distribution, but this could take many iterations. The result is that the sampler will have to be run for a number of iterations before it generates samples from the posterior distribution. This period is called the burnin phase, and the values drawn during the burnin need to be discarded from the sample.   
