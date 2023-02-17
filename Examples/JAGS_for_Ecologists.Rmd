@@ -1,0 +1,28 @@
+---
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    toc_depth: 2
+header-includes:
+  - \usepackage{amsmath}
+  - \usepackage{graphicx}
+title: "OCTWS -- March 24, 2022"
+geometry: margin=1in
+fontsize: 11pt
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+
+```{r setup, include=FALSE, purl = FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+```
+
+# Introduction to Bayesian Inference with JAGS for Ecologists {.tabset}
+
+## Introducing JAGS
+
+At it's heart, JAGS is 
