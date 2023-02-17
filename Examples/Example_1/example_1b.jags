@@ -1,3 +1,0 @@
-model{
-  y ~ dnorm(mu,1/sigma^2)
-}
