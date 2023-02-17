@@ -18,7 +18,9 @@ editor_options:
 
 
 ```{r setup, include=FALSE, purl = FALSE}
-knitr::opts_chunk$set(echo = FALSE, eval = TRUE)
+knitr::opts_chunk$set(echo = FALSE, 
+                      eval = TRUE,
+                      fig.align = "center")
 
 ## Load packages 
 library(tidyverse)
@@ -39,13 +41,66 @@ The purpose of the JAGS language is to define relationship between the variables
 
 There are also some conditions which the final graph must satisfy. It must be directed and it must be acyclic. Directed simply means that there is a direction to each of the connections in the graph. Each node accepts input from some nodes and passes output on to other nodes. The nodes providing input are called parents and the nodes accepting output are called children. In the example of the normal distribution, the mean and variance are parents and the stochastic node is their child. Acyclic means that you can't ever get back to the same node by following connections in the correct direction. We say that the final graph is a Directed Acyclic Graph or DAG short.
 
-#### Example
+#### Example 1: Two-Sample Problem
 
-Consider the problem of a two-sample $t$-test. We assume that we have $n$ observations from one group and $m$ from a second group such that the observations are normally distributed with the same variance but possibly a different mean. I will let $Y_{ij}$ denote the $j$-th observation from group $i$, $\mu_i$ the mean for group $i$, and $\sigma^2$ the common variance. The DAG might be drawn like this:
+Consider the setup of a two-sample $t$-test. We assume that we have $10$ observations from one group and $15$ from a second group such that the observations are normally distributed with the same variance but possibly a different mean. I will let $Y_{ij}$ denote the $j$-th observation from group $i$, $\mu_i$ the mean for group $i$, and $\sigma^2$ the common variance. The DAG might be drawn like this:
 
+![DAG for Two-Sample $t$-test](Figures/dag_1.png){width=300px}
 
+The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly for $Y_{2j}$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
 
 ### Basic JAGS syntax
+
+#### Example 1 (continued): Two-Sample Problem
+
+To introduce some of the basic JAGS notation we will look at the code to implement the two-sample setup of Example 1. The code is contained in the file `example_1.R` and looks like this:
+```{r, eval=FALSE, echo = TRUE}
+model{
+  # Parameters  
+  mu1 <- 5
+  mu2 <- 10
+  sigmasq <- 2
+  
+  # Distributions
+  for(j in 1:10){
+    y1[j] ~ dnorm(mu1,1/sigmasq)
+  }
+  
+  for(j in 1:15){
+    y2[j] ~ dnorm(mu1,1/sigmasq)
+  }
+}
+```
+Let's break this down.
+
+First, the code must be enclosed in a block of text with `model{` at the top of the file and `}`. This may seem a little odd. However, JAGS also allows a second block enclosed by `data{...}` that defines data manipulations that are to be run before the model is run. We will do all of our data manipulations in `R` so we won't need the second block, but you still need to enclose the code with `model{...}` so JAGS knows where to look.
+
+Each node is defined by a statement of the form `variable ~ definition` or `variable <- definition`. The first form defines a stochastic node and the second defines a deterministic node. In this case, `mu1`, `mu2`, and `sigmasq` represent the values $\mu_1$, $\mu_2$, and $\sigma^2$ and are defined as stochastic nodes. I have given them specific values to make the code complete. On the other hand, $y1[j]$ and $y2[j]$ representing $Y_{1j}$ and $Y_{2j}$ are defined as stochastic nodes. The function `dnorm()` indicates that they are assigned normal distributions, and the function requires two arguments to complete their definitions: their respective means and their precisions (which is the reciprocal of the variance). 
+
+The lines beginning with the hash symbol (`#`) are comments, just as in `R`. These are ignored by JAGS and have no effect on the output. 
+
+The square brackets around `j` in the definition of `y1` and `y2` indicate that these nodes form one-dimensional arrays (i.e. vectors) that are indexed by the value of `j`. Arrays of any size can be constructed by adding more indices separated by commas. For example, `X1[i,j]` would define `X1` to be a two-dimensional array (a matrix) indexed by `i` and `j`, `X2[i,j,k]` would define `X2` to be a three-dimensional array indexed by `i`, `j`, and `k`, etc. In most cases, JAGS will infer the size of an array from the rest of the code so you do not need to define this explicitly. 
+
+Finally, the lines
+```{r,echo=TRUE,eval=FALSE}
+for(j in 1:10){
+  y1[j] ~ dnorm(mu1,1/sigmasq)
+}
+```
+create a for loop which defines the repeated structure for the 10 observations from the first group which all have the same distribution. This is not the same as a for loop in `R` which performs sequential calculations. Instead, it is just a convenient way to implement the same structure repeatedly. The model could also have been written with the lines
+```{r,echo=TRUE,eval=FALSE}
+y1[1] ~ dnorm(mu1,1/sigmasq)
+y1[2] ~ dnorm(mu1,1/sigmasq)
+y1[3] ~ dnorm(mu1,1/sigmasq)
+y1[4] ~ dnorm(mu1,1/sigmasq)
+y1[5] ~ dnorm(mu1,1/sigmasq)
+y1[6] ~ dnorm(mu1,1/sigmasq)
+y1[7] ~ dnorm(mu1,1/sigmasq)
+y1[8] ~ dnorm(mu1,1/sigmasq)
+y1[9] ~ dnorm(mu1,1/sigmasq)
+y1[10] ~ dnorm(mu1,1/sigmasq)
+```
+instead, but that is awfully tedious. 
 
 ### Running JAGS from R
 
