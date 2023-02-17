@@ -128,7 +128,7 @@ instead, but that is awfully tedious.
 
 ## Markov chain Monte Carlo
 
-## Initial Values and Burning
+## Initial Values and Burnin
 
 Recall that JAGS samples from the conditional distribution of a node given the current values of its parents and children. This makes sense once all of the nodes have values, but how are the first values generated? The answer is that JAGS generates initial values for each of the unobserved nodes. It tries to do so in a sensible way, but it can be difficult to sample consistent values for all of the nodes in a complex model. 
 
