@@ -49,6 +49,25 @@ Consider the setup of a two-sample $t$-test. We assume that we have $10$ observa
 
 The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly for $Y_{2j}$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
 
+#### Conditional Distributions
+
+When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children. 
+
+As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 and the largest is 12. the probability of the different outcomes are given in the following table:
+```{r}
+## Craps probabilities
+craps <- tibble(Outcome = as.integer(2:12),
+                Probability = c(1,2,3,4,5,6,5,4,3,2,1)/36)
+
+t(craps) %>%
+  kable(digits = 3)
+```
+Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the marginal probability of the outcome 5 is .111 and the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. In this case, the conditional probability is higher than the marginal probability. 
+
+We could also ask about the conditional probability for the values of the two die together given that the outcome (their sum) is 5. There are four different configurations of the two die that produce the outcome 5: 1 and 4, 2 and 3, 3 and 2, and 4 and 1. Hence, the probability of each of these configurations given that the sum is 5 is 1/4=.25. 
+
+In this case, it is very simple to construct these conditional distributions. However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS essentially solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.  
+
 ### Basic JAGS syntax
 
 #### Example 1 (continued): Two-Sample Problem
@@ -102,25 +121,10 @@ y1[10] ~ dnorm(mu1,1/sigmasq)
 ```
 instead, but that is awfully tedious. 
 
+
+
 ### Running JAGS from R
 
-
-## Conditional Distributions
-
-When you run JAGS you will supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes. That is, it samples from the distribution a node given the current values of both its parents and its children. 
-
-As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 and the largest is 12. the probability of the different outcomes are given in the following table:
-```{r}
-## Craps probabilities
-craps <- tibble(Outcome = as.integer(2:12),
-                Probability = c(1,2,3,4,5,6,5,4,3,2,1)/36)
-
-t(craps) %>%
-  kable(digits = 3)
-```
-Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the marginal probability of the outcome 5 is .111 and the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. In this case, the conditional probability is higher than the marginal probability. 
-
-We could also ask about the conditional probability for the values of the two die together given that the outcome (their sum) is 5. There are four different configurations of the two die that produce the outcome 5: 1 and 4, 2 and 3, 3 and 2, and 4 and 1. Hence, the probability of each of these configurations given that the sum is 5 is 1/4=.25. 
 
 ## Markov chain Monte Carlo
 
