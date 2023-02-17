@@ -2,12 +2,16 @@
 library(rjags)
 library(coda)
 
+# Create jags data
+jags_data <- list(mu = 10, sigma = 2)
+
 # Compile model
-model1 <- jags.model("example_1.jags")
+model1b <- jags.model(file = "example_1b.jags",
+                      data = jags_data)
 
 # Generate samples
-samples1 <- coda.samples(model1, "y", n.iter = 10000)
+samples1b <- coda.samples(model1b, "y", n.iter = 10000)
 
 # Compute summary statistics
-summary(samples1)
+summary(samples1b)
 
