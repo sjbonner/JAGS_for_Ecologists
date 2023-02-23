@@ -1,0 +1,10 @@
+model{
+  # Distributions
+  for(j in 1:10){
+    y1[j] ~ dnorm(mu1,1/sigmasq)
+  }
+  
+  for(j in 1:15){
+    y2[j] ~ dnorm(mu2,1/sigmasq)
+  }
+}
