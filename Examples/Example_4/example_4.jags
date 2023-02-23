@@ -1,0 +1,8 @@
+model{
+  ## Distribution of observed data
+  k ~ dbinom(p,n)
+  
+  ## Prior distribution
+  p ~ dunif(0,1)
+  
+}
