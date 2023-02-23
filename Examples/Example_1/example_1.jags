@@ -10,6 +10,6 @@ model{
   }
   
   for(j in 1:15){
-    y2[j] ~ dnorm(mu1,1/sigmasq)
+    y2[j] ~ dnorm(mu2,1/sigmasq)
   }
 }
