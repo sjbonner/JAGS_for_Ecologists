@@ -2,9 +2,9 @@
 output: 
   html_document:
     theme: cerulean
-    toc: true
+    toc: FALSE
     toc_float: true
-    toc_depth: 3
+    toc_depth: 2
 header-includes:
   - \usepackage{amsmath}
   - \usepackage{graphicx}
@@ -31,6 +31,8 @@ library(knitr)
 
 ## Introducing JAGS {.tabset}
 
+### Introduction 
+
 At it's heart, JAGS is a software package that provides methods to sample from complex probability distributions. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
 
 ### Directed Acyclic Graphs
@@ -49,10 +51,19 @@ Consider the setup of a two-sample $t$-test. We assume that we have $10$ observa
 
 The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly for $Y_{2j}$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
 
-#### Conditional Distributions
+#### Exercise 1: Linear Regression
+
+The simple linear regression model relates the mean of a response to some predictor. Specifically, we assume that the the $i$-th observation, denoted by $Y_i$, follows a normal distribution whose mean, $\mu_i$, is a linear function of the predictor, $x_i$, given by $\mu_i = \beta_0 + \beta_1 x_i$. Here $\beta_0$ is the intercept and $\beta_1$ is the slope. The variance of the response is assumed to be a constant, usually denoted by $\sigma^2$. 
+
+Construct the DAG for a simple linear regression model with $50$ observations. 
+
+Jump to the [solution](#solution1). 
+
+### Conditional Distributions
 
 When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children. 
 
+#### Example 2: Craps
 As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 and the largest is 12. the probability of the different outcomes are given in the following table:
 ```{r}
 ## Craps probabilities
@@ -68,11 +79,23 @@ We could also ask about the conditional probability for the values of the two di
 
 In this case, it is very simple to construct these conditional distributions. However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS essentially solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.  
 
+#### Exercise 2: Dominant and Recessive Traits
+
+The classic genetics problem assumes that there is a single gene for eye colour with two alleles: a dominant allele B that produces brown eyes and a recessive allele b that produces blue eyes. An individual has brown eyes if they have genotype BB or Bb and blue eyes if they have genotype bb. 
+
+Suppose that a population of 100 individuals contains 25 individuals with genotype BB, 50 individuals with genotype Bb, and 25 individual with genotype bb. 
+
+1) What is the probability that a randomly selected individual has at least one copy of the recessive allele?
+
+2) What is the probability that a randomly selected individual has at least one copy of the recessive allele give that they have brown eyes?
+
+
+
 ### Basic JAGS syntax
 
 #### Example 1 (continued): Two-Sample Problem
 
-To introduce some of the basic JAGS notation we will look at the code to implement the two-sample setup of Example 1. The code is contained in the file `example_1.R` and looks like this:
+To introduce some of the basic JAGS notation we will look at the code to implement the two-sample setup of Example 1. The code is contained in the file `Examples/Example_1/example_1.jags` and looks like this:
 ```{r, eval=FALSE, echo = TRUE}
 model{
   # Parameters  
@@ -86,7 +109,7 @@ model{
   }
   
   for(j in 1:15){
-    y2[j] ~ dnorm(mu1,1/sigmasq)
+    y2[j] ~ dnorm(mu2,1/sigmasq)
   }
 }
 ```
@@ -121,15 +144,214 @@ y1[10] ~ dnorm(mu1,1/sigmasq)
 ```
 instead, but that is awfully tedious. 
 
-
-
 ### Running JAGS from R
 
+#### rjags
 
-## Markov chain Monte Carlo
+There are several packages that allow you to connect `R` and JAGS. This allows you to process your data in `R` and then to easily retrieve the output from JAGS to summarize the results of your analysis. We'll make use of the `rjags` package. The two main functions we will use from the package are `jags.model()` which initializes the model and `coda.sample()` which runs the model to generate samples from the conditional distributions of the unobserved nodes.
 
-## Initial Values and Burnin
+#### `jags.model()`
+
+The function `jags.model()` compiles the model and adapts the sampler (which we will discuss later in the section on Markov chain Monte Carlo). The key arguments of the function are:
+
+- `file`: the name of the file containing a description of the model in the JAGS dialect of the BUGS language.
+- `data`: a list or environment containing the data. Any numeric objects in data corresponding to node arrays used in file are taken to represent the values of observed nodes in the model.
+
+#### `coda.samples`()
+
+The function `coda.samples()` runs the model to generate samples from the conditional distributions of the unobserved nodes. The key arguments for this function are:
+
+- `model`: a JAGS model object created with the function `jags.model()`.
+- `variable.names`: a character vector naming the variables whose values you want returned. 
+- `n.iter`: the number of samples to generate (i.e., the number of iterations)
+
+#### Example 1 (continued): Two-Sample Problem
+
+The following code will compile the model for the two-sample problem and then generate 100 samples from the 25 unobserved variables. Note that you only need to load the `rjags` package once in each `R` session. If you have not installed the package then `Rstudio` should prompt you to do so. You will also have to set the working directory for `R` to the location where *this file* is stored to run the example. The easiest way to do this is to open the file in `Rstudio` and then select `Session > Set Working Directory > Choose Directory...` from the menus and then navigate to the correct directory.
+
+```{r, echo = TRUE, eval = FALSE}
+# Load rjags
+library(rjags)
+
+# Initialize model
+jags_model_1 <- jags.model("Examples/Example_1/example_1.jags")
+
+# Generate samples
+jags_samples_1 <- coda.samples(jags_model_1, c("y1","y2"), n.iter = 100)
+```
+Run this code in `R`. If the model runs properly then you should see the following output. 
+```{r, echo = TRUE, eval = FALSE}
+Compiling model graph
+   Resolving undeclared variables
+   Allocating nodes
+Graph information:
+   Observed stochastic nodes: 0
+   Unobserved stochastic nodes: 25
+   Total graph size: 30
+
+Initializing model
+
+  |**************************************************| 100%
+```
+
+#### coda
+
+The `coda` package contains functions to summarize the samples generated by JAGS. Here will use the `summary()` function to generate sample statistics for each of the monitored variables. The output from the this function contains 3 pieces. The first provides basic information the running of the sampler, including the number of samples that were generated. The second lists the mean and standard deviation for each variables, along with two further statistics which we will discuss later. The third provides estimates of the quantiles for each variable. The column values in the column labelled `X%` represent the `X`-th percentile of the distribution for that variable -- the value which is greater than exactly `X`% percent of the samples. The 50-th percentile is the median of the distribution.
+
+#### Example 1 (continued): Two-Sample Problem
+```{r, echo = FALSE, eval = TRUE}
+## Load saved output
+jags_model_1 <- readRDS("Output/example_1_jags_model.rds")
+jags_samples_1 <- readRDS("Output/example_1_jags_samples.rds")
+```
+
+The following code loads the `coda` package and then summarizes the results from the previous model. Remember that you only need to load the package once each time you run `R`.
+```{r, eval = FALSE, echo = TRUE}
+## Load coda package
+library(coda)
+
+## Compute summaries
+summary(jags_samples_1)
+```
+For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard devitation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close to the values, but not exactly equal. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
+
+#### Passing Data to JAGS
+
+In most cases, you will want to pass data from `R` into JAGS. For example, the values of `mu1`, `mu2`, and `sigmasq` are coded into the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
+
+An easier way to do this is to pass the values of these parameters from `R` into JAGS instead of assigning values to these parameters within the JAGS model file. This is done using the `data` argument of the `jags.model()` function. The value supplied to this argument must be a named list. JAGS will then read these values before it runs the sampler.
+
+#### Example 1 (continued): Two-Sample Problem
+The file `Examples/Example_1/example_1b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. 
+
+The following code reruns the model from `R`. However, it includes code to construct the list `jags_data_1b` which defines the values of the parameters and then passes this to the function `jags.model()`.  
+```{r, echo = TRUE, eval = FALSE}
+# Construct data list
+jags_data_1b <- list(mu1 = 5, mu2 = 10, sigmasq = 2)
+
+# Initialize model
+jags_model_1b <- jags.model("Examples/Example_1/example_1b.jags", jags_data_1b)
+
+# Generate samples
+jags_samples_1b <- coda.samples(jags_model_1b, c("y1","y2"), n.iter = 100)
+```
+
+## Bayesian Statistics {.tabset}
+
+### Introduction
+So far, we have used JAGS to generate data from a model given set values for the parameters. The aim of statistical inference turns this around: we aim to learn about the values of the parameters based on a given set of data. We do this in Bayesian inference by constructing distributions that model our uncertainty in the values of the parameters conditional on the data. If the models are simple enough then we can describe these distributions mathematically. However, this is rarely possible in practice. Instead, we can use JAGS, or similar software, to simulate from the distributions of the parameters conditional on the observed data.
+
+### Prior and Posterior Distributions
+
+There is one final ingredient that needs to be defined before we can conduct inference using JAGS -- the prior distribution. The mathematics of probability implies that we must assign an initial distribution to each of the parameters in the model in order to construct its conditional distribution given the data. This distribution is called the prior distribution. It encodes our uncertainty about the parameter before data are observed (*a priori* in Latin). The conditional distribution that results from the combination of this distribution and the data is called the posterior distribution. It encodes our uncertainty about the parameter after the data are observed (*a posteriori*). 
+
+There are different ways of constructing prior distributions that have different effects on the posterior. Some of the debate can be rather philosophical, and we will avoid this during this workshop. Instead, we will look at common prior distributions and the effects they have on inference.
+
+#### Example 3: Coin Tossing
+
+Suppose that your friend has two coins, one of which is fair (i.e., it has a heads side and a tails side and lands heads side up 50% of the time) and one of which has heads on both sides (so it always lands heads side up). You close your eyes, pick one of the coins at random, and hand it to him. He will then toss it and tell you whether it lands heads or tails side up. Your job is to decide whether you have chosen the fair code or the coin with two heads.
+
+If you pick the coin at random then there is a 50% chance that you choose either coin. A priori, the probability that you chose the fair coin is .5 and the probability that you chose the coin with two heads is .5. This is the prior distribution. If he tosses the coin and it lands heads side up then it must be the fair coin. In this case, the posterior distribution puts probability 1 on the fair coin and probability 0 on the coin with two heads (and your job is easy). 
+
+What happens if the coin lands heads side up? It's possible to show in this case that the posterior distribution assigns a probability of 1/3 that the coin is the fair coin is and a probability of 2/3 that it is the coin with two heads.
+
+What happens if your friend tosses the same coin a second time and it lands heads side up again? In this case, the posterior probability that it is the fair coin is 1/5 and the probability that it is the coin with two heads is 4/5. More generally, if your friend tosses the coin $n$ times and it lands heads side up every time then the posterior distribution assigns probability $1/2^k$ that you chose the fair coin and probability $1-1/2^k$ that you chose the coin with two heads. 
+
+### Interpreting Posterior Distributions
+
+In Bayesian inference, information about the parameters is contained in the posterior distribution. Consider the coin tossing problem. Initially, the prior distribution assigns equal probability to the fair coin and the coin with two heads. After the coin lands heads side up once, the posterior distribution assigns probability of $2/3$ to the coin with two heads. There is still a 1/3 chance that it is the fair coin, but it is more likely to be the coin with two heads. After the coin and heads side up twice, the probability assigned to the coin with two heads increases to 4/5. As the coin is tossed more and more and lands heads side up more and more often you become more and more certain that you chose the coin with two heads. There is always a possibility that you picked the fair coin and it happened to land heads side up every time by chance, but this becomes less and less likely the more the coin is tossed. If the coin lands heads side up 10 times in a row then the posterior distribution assigns probability $1-1/2^10=.9990234$ to the coin with two heads. This is so unlikely to happen if the coin is fair, that the posterior distribution assigns a probability on only $.000976$ to the fair coin (less than 1 in 10,000). 
+
+In most cases, the distributions we assign to parameters will be continuous not discrete. For example, prior distributions are often selected to be normal distributions. In these cases, we summarize information about the parameters using the basic statistics for describing the shape of a distribution that you have likelihood encountered in introductory statistics classes. These include the mean, median, and mode to identify the centre (location) of the distribution and the standard deviation to measure the spread of the distribution. 
+
+A more informative summary of a distribution that measures both its location and its spread is an interval that contains a certain amount of the distribution's probability. An interval that contains $X$% of the probability under the posterior distribution for a parameter is called an $X$% credible interval. For example, the interval between the 2.5 percentile and 97.5 percentile contains 95% of the probability and hence forms a 95% credible interval. Credible intervals are the Bayesian analogue of confidence intervals in classical statistics. 
+
+In practice, it is common to provided one of the measures of location of the posterior distribution (most of the mean) as a point estimate (the best guess at the value of a parameter) and either the standard deviation or a credible interval as a measure of the spread. Bigger values of the standard deviation or wider credible intervals indicate that there is more uncertainty about the value of the parameter (the posterior distribution is more spread out). Smaller values of the standard deviation or narrower credible intervals indicate that there is less uncertainty about the value of the parameter (the posterior distribution is less spread out). 
+
+#### Example 4: Coin Tossing 2
+
+Consider the coin tossing problem again, but suppose this time that your friend only has one coin which has both a heads and a tails side. However, it is not fair and lands heads side up with some probability between 0 and 1, which I'll call $p$, and tails side up with probability $1-p$. E.g., if $p=.1$ then it lands heads side up on 1 out of every 10 tosses, on average, and if $p=.9$ then it lands heads side up on 9 out of every 10 tosses, on average. Your job this time is guess the value of $p$. 
+
+You might choose a prior distribution in this case that assigns the same probability to every value between 0 and 1. This is the uniform distribution. Suppose that your friend tosses the coin $n$ times and it lands heads side up $k$ times. In this case, it's possible to compute the posterior distribution exactly. The plots below compare the posterior distribution for two different values of $n$, 5 and 10, and two different values of $k/n$, .2 (meaning that $k$ is equal to 1 if $n=5$ and 2 if $n=10$) and .8 (meaning that $k$ is equal to 4 if $n=5$ and $8$ if $k=10$). 
+```{r, echo = FALSE, eval = TRUE}
+mydata <- crossing(n = c(5,10),
+                   r = c(.2,.8),
+                   p = (1:100)/101) %>%
+  mutate(k = r * n,
+         d = dbeta(p, k + 1, n - k + 1))
+
+mydata %>%
+  ggplot(aes(x = p, y = d)) + 
+  geom_line() + 
+  facet_grid(n ~ r) +
+  geom_vline(aes(xintercept = r), lty = 2) +
+  ylab("Posterior Distribution")
+  
+```
+
+In each case, the posterior distribution is highest around the value $k/n$, which is shown by the dotted line. This indicates that $k/n$ is the best guess at the probability of tossing a head given the observed data. However, the posterior distribution becomes narrower as $n$ increases, meaning that we become more certain of the probability as we toss the coin more and collect more data. 
+
+This is also evident in the following table which provides the posterior means and the lower and upper bounds of the 95% credible intervals for $p$ for each combination of $n$ and $k$. The posterior mean only depends on the ratio $k/n$, but the confidence interval becomes narrower as $n$ increases. 
+```{r}
+mytab <- crossing(n = c(5,20),
+                  r = c(.2,.8)) %>%
+  mutate(k = n * r,
+         Mean = r,
+         Lower = qbeta(.025,k + 1, n - k + 1),
+         Upper = qbeta(.975, k+1, n - k + 1))
+
+mytab %>%
+  select(-r) %>%
+  kable(digits = 2)
+```
+
+#### Example 4 (continued): Coin Tossing 2
+
+The number of heads in our coin toss example follows a binomial distribution with parameters $n$ and $p$. This distribution is implemented with the function `dbinom(p,n)` in JAGS (yes, the `n` and the `p` are backwards). The uniform distribution over the interval from 0 to 1 is implemented with the function `dunif()`. Putting these together, we can implement the model with the code
+```{r, eval = FALSE, echo = TRUE}
+model{
+  ## Distribution of observed data
+  k ~ dbinom(p,n)
+  
+  ## Prior distribution
+  p ~ dunif(0,1)
+  
+}
+```
+This code is also provided in the file `Examples/Example_4/example_4.jags`. The following `R` code would compile this model and then generate 1000 samples from the distribution of `p` for the case in which the coin is tossed 10 times and lands heads side up 4 times. 
+```{r, eval = FALSE, echo = TRUE}
+## Define data
+jags_data_4 <- list(n = 10, k = 4)
+
+## Compile model
+jags_model_4 <- jags.model("Examples/Example_4/example_4.jags", jags_data_4)
+
+## Generate samples
+jags_samples_4 <- coda.samples(jags_model_4, "p", n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_4)
+```
+Run the code and compare the mean and 95% credible interval from the sample with the theoretical mean and 95% credible interval given above. You should find that the results are close but not exact. Try running the code again and increase the number of sample drawn from the posterior distribution from 1000 to 5000 or 10000. You should find that the results become closer and closer to the theoretical value as the number of samples generated increases.  
+
+## Ecological Models {.tabset}
+
+## Markov chain Monte Carlo {.tabset}
+
+### Initial Values and Burnin
 
 Recall that JAGS samples from the conditional distribution of a node given the current values of its parents and children. This makes sense once all of the nodes have values, but how are the first values generated? The answer is that JAGS generates initial values for each of the unobserved nodes. It tries to do so in a sensible way, but it can be difficult to sample consistent values for all of the nodes in a complex model. 
 
 One thing this means is that the initial values may not match well with the posterior distribution. The theory of MCMC says that by resampling the values of the unobserved nodes from their conditional distributions will eventually lead to samples that match with the posterior distribution, but this could take many iterations. The result is that the sampler will have to be run for a number of iterations before it generates samples from the posterior distribution. This period is called the burnin phase, and the values drawn during the burnin need to be discarded from the sample.   
+
+## Exercise Solutions {.tabset}
+
+### Exercise 1: Linear Regression{#solution1}
+The DAG for the simple linear regression model might be drawn as:
+
+![DAG for Simple Linear Regression](Figures/dag_2.png){width=300px}
+
+### Exercise 2: Dominant and Recessive Traits
+
+1) There are 75 individuals in the population with at least 1 recessive allele (50 with genotype Bb and 25 with genotype bb). Hence, the probability that a randomly selected individual has 1 recessive allele is $75/100=.75$.
+
+2) There are 75 individuals with brown eyes in the population (25 with genotype BB and 50 with genotype Bb). Of these, 50 have 1 recessive allele. The probability that a randomly selected individual has 1 recessive allele given that they have brown eyes is $50/75=.67$. 
