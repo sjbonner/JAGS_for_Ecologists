@@ -397,6 +397,12 @@ We will look at versions of three different models to illustrate the application
 
 ### Closed Population Models
 
+<center>
+
+![Snowshoe Hare](Figures/snowshoe-hare-4.jpg){width=500px}
+
+</center>
+
 #### Two-Sample Experiment
 
 The simplest mark-recapture study is one in which individuals are captured on only two occasions. A sample of individuals are captured on the first occasion, marked, and returned to the population. A second sample is then taken after allowing sufficient time for the marked individuals to mix back into the population (but not so long that individuals can enter or leave the population). This sample will contain both marked and unmarked individuals, and we can use the ratio of marked and unmarked individual to estimate the size of the population.
@@ -462,7 +468,7 @@ model{
 ```
 I have also added a line of code to compute the total population size as a derived variable, $N=n_1 + N_0$. Note that this solution only works when the population size is large. There is another solution that works in all cases, but it is more technical. This code is provided in the file `Examples/Example_5/example_5a.jags`.
 
-##### Example 5: Snowshoe Hares (Two-S)
+##### Example 5: Snowshoe Hares (Two-Samples)
 
 As an example, we will analyse data from a study of snowshoe hares. Hares were sampled from the populatin on 6 different occasions, but we will focus just on the first two samples for now. A total of $n_1=16$ hares were captured and marked in the first sample of which $m=4$ were recaptured in the second sample. The second sample also contained a further $n_2=24$ unmarked hares. The LP estimate for the population size given these values is 112 (after rounding) and the Chapman estimate is 98.
 
@@ -505,7 +511,7 @@ Suppose now that more than two samples are taken from the population. Each time 
 
 We'll start by assuming that the capture probability is the same on all occasions, and again denote this with $p$. This is often referred to as having constant $p$. In this case, the probability that an individual is captured at least once is $p_\mbox{ever}=1-(1-p)^K$ where $K$ represents the number of capture occasion. The number of individuals captured at least once during the experiment then follows a binomial distribution with parameters $N$ and $p_\mbox{ever}$. Moreover, the capture histories for the captured individuals form a sequence of Bernoulli trials (binomials of size one) with probability $p$. 
 
-###### Example 6: Snowshoe Hares (Full Data)
+##### Example 6: Snowshoe Hares (Full Data)
 
 To illustrate the model with more than two samples we will analyse the full snowshoe hare data set. The data is provided in the file `Examples/Example_6/snowshoe_hare.csv`. Each row in the data set represents the capture history for 1 individual. For example, the capture history of the first individual is 111111 indicating that it was captured on all 6 occasions while the capture history for the 10th individual is 100100 indicating that it was captured only on the 1st and 4th occasions. A total of 68 hares were captured at least one time.
 
