@@ -462,13 +462,14 @@ model{
 ```
 I have also added a line of code to compute the total population size as a derived variable, $N=n_1 + N_0$. Note that this solution only works when the population size is large. There is another solution that works in all cases, but it is more technical. This code is provided in the file `Examples/Example_5/example_5a.jags`.
 
-##### Example 5: Two-Sample Experiment
-Suppose that a two-sample experiment is conducted and that 30 individuals are captured in the first sample ($n_1$), 37 unmarked individuals are captured in the second sample ($n_2$), and that of the 30 captured in the first sample 14 are also captured in the second sample ($m$). The LP estimate for the population size given these values is 109 (after rounding) and the Chapman estimate is 106.
+##### Example 5: Snowshoe Hares (Two-S)
+
+As an example, we will analyse data from a study of snowshoe hares. Hares were sampled from the populatin on 6 different occasions, but we will focus just on the first two samples for now. A total of $n_1=16$ hares were captured and marked in the first sample of which $m=4$ were recaptured in the second sample. The second sample also contained a further $n_2=24$ unmarked hares. The LP estimate for the population size given these values is 112 (after rounding) and the Chapman estimate is 98.
 
 The model can be run in JAGS with the following code:
 ```{r echo=TRUE, eval=FALSE}
 ## Construct JAGS data
-jags_data_5a <- list(n1 = 30, n2 = 37, m = 14, pN0 = rep(1,1000))
+jags_data_5a <- list(n1 = 16, n2 = 24, m = 4, pN0 = rep(1,1000))
   
 ## Compile model
 jags_model_5a <- jags.model("Examples/Example_5/example_5a.jags", jags_data_5a)
@@ -479,7 +480,7 @@ jags_samples_5a <- coda.samples(jags_model_5a, c("p","N"), n.iter = 1000)
 ## Compute summary statistics
 summary(jags_samples_5a)
 ```
-You should find that the posterior mean for $N_0$ is about 117 and that the 95% credible interval extends from about 82 to 176. Again, your exact results may differ somewhat because of random variations in the sampling. 
+You should find that the posterior mean for $N$ is about 145 and that the 95% credible interval extends from about 70 to 321. Again, your exact results may differ somewhat because of random variations in the sampling. 
 
 Once again, we can visualize the summary statistics with a caterpillar plot:
 ```{r, echo=TRUE, eval=FALSE}
@@ -504,67 +505,26 @@ Suppose now that more than two samples are taken from the population. Each time 
 
 We'll start by assuming that the capture probability is the same on all occasions, and again denote this with $p$. This is often referred to as having constant $p$. In this case, the probability that an individual is captured at least once is $p_\mbox{ever}=1-(1-p)^K$ where $K$ represents the number of capture occasion. The number of individuals captured at least once during the experiment then follows a binomial distribution with parameters $N$ and $p_\mbox{ever}$. Moreover, the capture histories for the captured individuals form a sequence of Bernoulli trials (binomials of size one) with probability $p$. 
 
-Let $n$ denote the number of individuals captured at least once during the experiment. The data component of this model can be written as:
-```{r eval=FALSE,echo=TRUE}
-# Data distribution
-  n ~ dbinom(p_ever,N)
-  
-  for(i in 1:n){
-    for(k in 1:K){
-      caps[i,k] ~ dbern(p)
-    }  
-  }
-  
-  # Derived variables
-  p_ever <- 1 - (1-p)^K
-```
-The same prior distributions can be applied to this model as in Example 5, and so we can write the full model as
-```{reval=FALSE,echo=TRUE}
-model{
-  # Data distribution
-  n ~ dbinom(p_ever,N)
-  
-  for(i in 1:n){
-    for(k in 1:K){
-      caps[i,k] ~ dbern(p)
-    }  
-  }
-  
-  # Derived variables
-  p_ever <- 1 - (1-p)^K
-  
-  # Prior distribution
-  p ~ dunif(0,1)
-  
-  N ~ dcat(pN)
-}
-```
-The code is also provided in the file `Examples/Example_6/example_6a.jags`.
+###### Example 6: Snowshoe Hares (Full Data)
 
-###### Example 6: More than two samples
+To illustrate the model with more than two samples we will analyse the full snowshoe hare data set. The data is provided in the file `Examples/Example_6/snowshoe_hare.csv`. Each row in the data set represents the capture history for 1 individual. For example, the capture history of the first individual is 111111 indicating that it was captured on all 6 occasions while the capture history for the 10th individual is 100100 indicating that it was captured only on the 1st and 4th occasions. A total of 68 hares were captured at least one time.
 
-As an example we will analyse a simulated data set, so we know the true population size. I generated the data with 5 capture occasions and a true population size of 123. A total of 105 individuals were captured at least once and the capture histories for the first three individuals look like this:
-```{r echo = FALSE, eval=TRUE}
-## Load data
-data6 <- readRDS("Examples/Example_6/example_6_data.rds")
+The JAGS code to fit the model data is in the file `Examples/Example_6/example_6a.jags`. The way I have implemented this model uses a process called data augmentation to estimate the population size. Along with the capture histories of the 68 marked individuals, we will also include a large number of capture histories of all 0s representing the potential individuals that might have gone undetected. Each individual is also assigned a variable, called `alive`, that determines whether or not it is actually part of the population. Marked individuals must be alive because they were captured. Each of the added individuals has the potential to be alive or not, and the total population size is equal to the number of alive individuals. 
 
-head(data6,3)
-```
-The full data is in the file `Examples/Example_6/example_6_data.rds`.
-
-The following code will fit the model and generate summary statistics. Note that I have set the values of $n$, the number of individuals observed, and $K$, the number of capture histories, manually, but you could modify the code to compute these from the data. Once again, we need to set the initial value for $N$ to ensure the code will run. 
+The following code will fit the model and generate summary statistics. I have chosen to add 1000 extra unobserved individuals to the population, represented by the value `M` in the code below. The value is somewhat arbitrary and will not affect the results, provided that it is big enough. 
 ```{r, echo=TRUE,eval=FALSE}
 ## Load data
-data6 <- readRDS("Examples/Example_6/example_6_data.rds")
+hare <- read_csv("Examples/Example_6/snowshoe_hare.csv")
 
 ## Construct JAGS data
-jags_data_6 <- list(n = 105, K = 5, caps = data6, pN=rep(1,1000))
-
-## Set initial values
-jags_inits_6 <- list(N = 106)
+jags_data_6 <- list(n = 68,
+                    M = 1000, 
+                    K = 6, 
+                    alive = rep(c(1,NA),c(68,1000)),
+                    caps = rbind(as.matrix(hare),matrix(0,1000,6)))
 
 ## Compile model
-jags_model_6a <- jags.model("Examples/Example_6/example_6a.jags", jags_data_6, inits = jags_inits_6)
+jags_model_6a <- jags.model("Examples/Example_6/example_6a.jags", jags_data_6)
 
 ## Generate samples
 jags_samples_6a <- coda.samples(jags_model_6a, c("p","N"), n.iter = 1000)
@@ -572,51 +532,17 @@ jags_samples_6a <- coda.samples(jags_model_6a, c("p","N"), n.iter = 1000)
 ## Compute summary statistics
 summary(jags_samples_6a)
 ```
-You should find that the posterior mean of $N$ is about 118, which is very close to the truth, and that the 95% credible interval extends from about 110 to 130. 
-
-Here is the code to create the visualization of the summary statistics using a caterpillar plot:
-```{r echo = TRUE, eval = FALSE}
-## Create ggs object
-ggs_6a <- ggs(jags_samples_6a)
-
-## Draw caterpillar plot for N
-ggs_caterpillar(ggs_6a, "N")
-
-## Draw caterpillar plot for p
-ggs_caterpillar(ggs_6a, "p")
-```
+You should find that the posterior mean of $N$ is about 75 and that the 95% credible interval extends from about 70 to 83. 
 
 #### More than Two Samples -- Time-Varying $p$
 
-There are many reasons that the capture probability might change across the capture occasions. Perhaps the capture of individuals depends on weather conditions. In this case, we might want the model to allow the capture probability to change over time. This is implemented with the following code:
-```{r echo=TRUE, eval=FALSE}
-model{
-  # Data distribution
-  n ~ dbinom(p_ever,N)
-  
-  for(i in 1:n){
-    for(k in 1:K){
-      caps[i,k] ~ dbern(p[k])
-    }  
-  }
-  
-  # Derived variables
-  p_ever <- 1 - prod(1 - p[1:K])
-  
-  # Prior distribution
-  for(k in 1:K){
-    p[k] ~ dunif(0,1)
-  }
-  
-  N ~ dcat(pN)
-}
-```
-This looks very similar to what we had before, with a few minor changes. First, I have replaced the constant `p` with the occasion specific `p[k]` in the distribution of the capture histories. Second, I have assigned each of the new capture probabilities a separate uniform prior distribution using a loop over `k`. Third, I have modified the calculation of the probability of being captured at least once, `p_ever`, to account for the variation over time. 
+There are many reasons that the capture probability might change across the capture occasions. Perhaps the capture of individuals depends on weather conditions. In this case, we might want the model to allow the capture probability to change over time. The code for this model is provided in `Examples\Example_6\example_6b.jags`. 
 
-#### Example 6 (continued)
+##### Example 6 (continued): Snowshoe Hares (Full Data)
+The following code will fit the model with time-varying capture probabilities to the snowshoe hare data. Note that you do not need to recreate the data object:
 ```{r, echo=TRUE,eval=FALSE}
 ## Compile model
-jags_model_6b <- jags.model("Examples/Example_6/example_6b.jags", jags_data_6, inits = jags_inits_6)
+jags_model_6b <- jags.model("Examples/Example_6/example_6b.jags", jags_data_6)
 
 ## Generate samples
 jags_samples_6b <- coda.samples(jags_model_6b, c("p","N"), n.iter = 1000)
@@ -624,7 +550,8 @@ jags_samples_6b <- coda.samples(jags_model_6b, c("p","N"), n.iter = 1000)
 ## Compute summary statistics
 summary(jags_samples_6b)
 ```
-The output from this model will now display summary statistics for the capture probabilities on each of the 5 occasions. The posterior summary statistics can be visualized with the following code:
+
+We can also visualize this summary statistics. In this case, $p$ and $N$ are on very different scales. If we plot them both on the same axes then the plotting symbols for the summary statistics of $p$ all lie on top of each other. To avoid this, we can separate the plots for $N$ and $p$:
 ```{r echo=TRUE, eval=FALSE}
 ## Create ggs object
 ggs_6b <- ggs(jags_samples_6b)
@@ -661,51 +588,38 @@ mydata %>%
   ylab("Probability Density")
 ```
 
-##### Example 6 (continued)
-The following code implements the closed population mark-recapture model with the hierarichal model for $p$:
-```{r echo=TRUE, eval = FALSE}
-model{
-  # Data distribution
-  n ~ dbinom(p_ever,N)
-  
-  for(i in 1:n){
-    for(k in 1:K){
-      caps[i,k] ~ dbern(p[k])
-    }  
-  }
-  
-  # Derived variables
-  p_ever <- 1 - prod(1 - p[1:K])
-  
-  # Prior distribution
-  for(k in 1:K){
-    p[k] ~ dbeta(alpha,beta)
-  }
-  alpha ~ dgamma(.1,.1)
-  beta ~ dgamma(.1,.1)
-  
-  N ~ dcat(pN)
-}
-```
-Here I have replaced the uniform prior distribution for `p[k]` with the beta distribution with parameters `alpha` and `beta`. I have then assigned `alpha` and `beta` their own prior distributions. In this case, I have assigned both parameters to have gamma prior distributions. I won't go into specifics, but this is a common choice of prior for parameters that can be any positive number. 
+The JAGS code to fit the closed population model with the hierarchical beta prior distribution is provided in `Examples/Example_6/example_6_c.jags`.
 
-The following code will run the model in `R`:
+##### Example 6 (continued): Snowshoe Hares (Full Data) 
+
+The following code will fit the closed population model with the hierarchical prior distribution to the snowshoe hare data:
 ```{r, echo=TRUE,eval=FALSE}
 ## Compile model
-jags_model_6c <- jags.model("Examples/Example_6/example_6c.jags", jags_data_6, inits = jags_inits_6)
+jags_model_6c <- jags.model("Examples/Example_6/example_6c.jags", jags_data_6)
 
 ## Generate samples
-jags_samples_6c <- coda.samples(jags_model_6c, c("alpha","beta","N"), n.iter = 1000)
+jags_samples_6c <- coda.samples(jags_model_6c, c("p","alpha","beta","N"), n.iter = 1000)
 
 ## Compute summary statistics
 summary(jags_samples_6c)
 ```
-Note that this time I monitored not the individual capture probabilities but the parameters `alpha` and `beta`. This allows us to describe the distribution of the capture probabilities over all occasions instead of commenting on the value of the capture probability for a specific occasion. You should find that the estimates of these parameters (the posterior means) are about 5 and 9. Given these values, we could say that the mean capture probability is $5/(5 + 9)=.36$. Using the function `qbeta()` in `R` we could compute the quantiles of the distribution:
+The following code creates the caterpillar plot to visualize the summary statistics for the individual capture probabilities:
+```{r echo=TRUE, eval=FALSE}
+## Create ggs object
+ggs_6c <- ggs(jags_samples_6c)
+
+## Draw caterpillar plot for p
+ggs_caterpillar(ggs_6c, "^p", sort = FALSE)
+```
+
+Fitting a hierarchical model has several advantages. First, it can improve our estimates of the individual capture probabilities. It will be hard to see in this case, but the estimates of the capture probabilities from the hierarchical model are slightly closer to each other than the estimates from the fully time-varying model. This process is called shrinkage and we say that the capture probabilities have been shrunk back toward their mean. In essence, the hierarchical model provides a midpoint between the contstant $p$ and time-varying $p$ models and lets the data decide how much variation there should be.
+
+The hierarchical model also allows us to describe the distribution of capture probabilities over all possible samples, rather than focusing on the 6 samples in the data, and to predict what the capture probability might be in future samples. The estimates of `alpha` and `beta` (their posterior means) from my run of the model were are about 5.6 and 11.8. Given these values, we could say that the mean capture probability is $5.6/(5.6 + 11.8)=.32$. Using the function `qbeta()` in `R` we could compute the quantiles of the distribution:
 ```{r, eval = TRUE, echo = TRUE}
 ## Compute the 2.5% and 97.5%-iles of the distribution of p
-qbeta(c(.025,.975), 5, 9)
+qbeta(c(.025,.975), 5.6, 11.8)
 ```
-If we were to collect another sample then we would guess that the capture probability would be about .36 and we could be 95% certain that it would be between about .14 and .61. You can replace the values 5 and 9 with the values from your summary to obtain specific results. 
+If we were to collect another sample then we would guess that the capture probability would be about .31 and we could be 95% certain that it would be between about .13 and .55. You can replace the values 6.2 and 13.8 with the values from your summary to obtain specific results. 
 
 ### Open Populations
 
