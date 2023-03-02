@@ -29,11 +29,51 @@ library(knitr)
 
 # Introduction to Bayesian Inference with JAGS for Ecologists {.tabset}
 
+## Welcome!
+
+Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent book on Bayesian statistics, and my goal is not to try to reproduce all of the content they contain. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. 
+
+The workshop is designed to allow you to work at you own pace. The material is divided into a number of sections organized using the tabs at the top of the page. Each tab (except this one) has several subtabs. Working through the tabs in order will lead you through a series of explanations, examples, and exercise that will introduce you to the basic concepts of Bayesian statistics and programming with JAGS. The content at the end of the course will also introduce you to some of the core ideas of Markov chain Monte Carlo (MCMC). By the end of the workshop you should be able to:
+
+- Construct the Directed Acyclic Graph (DAG) for a simple statistical model.
+- Understand the connection between a DAG and JAGS code for the same model.
+- Run a model in JAGS using the functions from the `rjags` package in R.
+- Summarize the results of a model based on the output from JAGS.
+- Explain the basic workings of MCMC. 
+
+Please don't hesitate to ask any questions.
+
+Simon
+
+
 ## Introducing JAGS {.tabset}
 
-### Introduction 
+### Introduction
 
-At it's heart, JAGS is a software package that provides methods to sample from complex probability distributions. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
+We will begin by looking at JAGS and then see how the software can be used in the framework of Bayesian statistics. The core idea behind JAGS is that we can learn about a distribution by repeatedly sampling. 
+
+Consider the problem of tossing a coin repeatedly and counting the number of times it lands heads side up, which I will call $Y$. There is statistical theory that tells us about the distribution of $Y$ -- if the coin is fair then $Y$ has a binomial distribution with parameters equal to the number of tosses and the probability of the coin landing heads side up, which should be .5. We could then use the theoretical distribution to calculate values like the mean (average) number of times the coin lands heads side up on 10 tosses or the probability that the coin lands heads side up on exactly 5 of 10 tosses.
+
+However, you could also estimate these values by simulation. Using a physical simulation, you could repeatedly toss a coin 10 times in a row and count the number of times the coin lands heads side up on each trial. You could then estimate the mean number of times the coin lands heads side up by averaging the observed values. You could estimate the probability that the coin lands heads side up on exactly 5 of 10 tosses by the proportion of times this specific event occurs. 
+
+A more efficient method of simulation is to do this on a computer. The following R code will simulate data for the coin tossing problem and estimate the values above:
+```{r, eval = FALSE, echo = TRUE}
+## Set parameters
+n <- 10 # Number of tosses per trial
+m <- 100 # Number of trials
+
+## Simulate number of heads
+Y <- rbinom(m, n, .5)
+
+## Estimate the mean
+mean(Y)
+
+## Estimate the probability the coin lands heads side up 5 times
+sum(Y == 5)/m
+```
+The true values are 5.0 and .25. Your results should be close to this, but they will not be exact. You will also get different answers if you repeat the simulation. However, if you increase the number of replicates (`m`), then the results will get closer and closer to the truth. Although there is always some level of variation, if `m` is big enough then the uncertainty will be small enough to ignore. 
+
+At it's heart, JAGS is doing exactly this, but it is able to simulate from much more complicated distributions then we could work with easily in R. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
 
 ### Directed Acyclic Graphs
 
@@ -215,6 +255,19 @@ summary(jags_samples_1)
 ```
 For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard devitation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close to the values, but not exactly equal. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
 
+We can also look at the summary information graphically using the functions in the `ggmcmc` package. Install the package, and run the following code to create a caterpillar plot visualizing the summary statistics for each sampled value:
+```{r}
+## Load package
+library(ggmcmc)
+
+## Construct ggs object
+ggs_1 <- ggs(jags_samples_1)
+
+## Create caterpillar plot
+ggs_caterpillar(ggs_1, sort = FALSE)
+```
+For each of the sampled values, labelled on the left side, the point represents the posterior mean, the thick bar represents the extents of the 50% interval formed by the 25 and 75%-iles, and the thin bar represents the extents of the 95% interval formed by the 2.5 and 97.5%-iles. This plot very clearly shows the difference between the two groups. All of the sampled means for the first group are near 5 and all of the sampled means for the second group are near 10.
+
 #### Passing Data to JAGS
 
 In most cases, you will want to pass data from `R` into JAGS. For example, the values of `mu1`, `mu2`, and `sigmasq` are coded into the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
@@ -306,7 +359,11 @@ mytab %>%
 
 #### Example 4 (continued): Coin Tossing 2
 
-The number of heads in our coin toss example follows a binomial distribution with parameters $n$ and $p$. This distribution is implemented with the function `dbinom(p,n)` in JAGS (yes, the `n` and the `p` are backwards). The uniform distribution over the interval from 0 to 1 is implemented with the function `dunif()`. Putting these together, we can implement the model with the code
+The number of heads in our coin toss example follows a binomial distribution with parameters $n$ and $p$. This is a very simple model, and the DAG looks like this
+
+![DAG coin tossing model](Figures/coin_toss_dag.png){width=150px}
+
+This binomial distribution is implemented with the function `dbinom(p,n)` in JAGS (yes, the `n` and the `p` are backwards). The uniform distribution over the interval from 0 to 1 is implemented with the function `dunif()`. Putting these together, we can implement the model with the code
 ```{r, eval = FALSE, echo = TRUE}
 model{
   ## Distribution of observed data
@@ -314,7 +371,6 @@ model{
   
   ## Prior distribution
   p ~ dunif(0,1)
-  
 }
 ```
 This code is also provided in the file `Examples/Example_4/example_4.jags`. The following `R` code would compile this model and then generate 1000 samples from the distribution of `p` for the case in which the coin is tossed 10 times and lands heads side up 4 times. 
@@ -334,6 +390,472 @@ summary(jags_samples_4)
 Run the code and compare the mean and 95% credible interval from the sample with the theoretical mean and 95% credible interval given above. You should find that the results are close but not exact. Try running the code again and increase the number of sample drawn from the posterior distribution from 1000 to 5000 or 10000. You should find that the results become closer and closer to the theoretical value as the number of samples generated increases.  
 
 ## Ecological Models {.tabset}
+
+### Introduction
+
+We will look at versions of three different models to illustrate the application of Bayesian inference in the analysis of ecological data. First, we will consider a simple closed population model. Then we will look at an implementation of the Cormack-Jolly-Seber (CJS) model for open populations, and finally we will consider a multi-state version of the CJS model.
+
+### Closed Population Models
+
+#### Two-Sample Experiment
+
+The simplest mark-recapture study is one in which individuals are captured on only two occasions. A sample of individuals are captured on the first occasion, marked, and returned to the population. A second sample is then taken after allowing sufficient time for the marked individuals to mix back into the population (but not so long that individuals can enter or leave the population). This sample will contain both marked and unmarked individuals, and we can use the ratio of marked and unmarked individual to estimate the size of the population.
+
+Let $n_1$ denote the number of individuals captured and marked in the first sample, $n_2$ the number of unmarked individuals captured in the second sample (i.e., the number in the second sample that were not captured in the first sample), $m$ the number of individuals captured in both, and $N$ the unknown population size. One way to estimate the population size is to assume that the proportion of marked individuals captured in the second sample is the same as the proportion of marked individuals in the entire population:
+$$
+\frac{m}{n_1 + n_2}=\frac{n_1}{N}.
+$$
+Solving this equation for $N$ provides the estimator
+$$
+\hat{N}_{LP} = \frac{n_1(m + n_2)}{m}
+$$
+This is commonly known as the Lincoln-Petersen estimator (hence the subscript LP). An alternative estimator that has better statistical properties is the Chapman estimator
+$$
+\hat{N}_{C}=\frac{(n_1+1)(m + n_2+1)}{(m+1)} - 1.
+$$
+To implement this model in the Bayesian frawework we need to describe the distributions of the observed data and then assign prior distributions to the unknown parameters. If we assume that all individuals in the population have the same probability of capture, which I will denote by $p$, then $m$ follows a binomial distribution with parameters $n_1$ and $p$ and $n_2$ follows a binomial distribution with parameters $N-n_1$ and $p$. I will let $N_0=N-n_1$ denote the number of individuals in the population that were not captured and marked in the first sample. The DAG for this model looks like this:
+
+![DAG for Two-Sample Experiment](Figures/lp_dag.png){width=300px}
+
+
+As noted before, the binomial distribution is implemented in JAGS with the function `dbinom()` and so the data portion of the model would look like this:
+```{r echo=TRUE,eval=FALSE}
+  # Data distribution
+  m ~ dbinom(p,n1)
+  n2 ~ dbinom(p,N0)
+```
+Unless we have previous information about the capture probability, we might it a uniform prior from 0 to 1 to indicate that it is equally likely to take any value in its range. The population size has to be an integer, and so we need to be a little careful about how we assign the prior for $N$. One possibility is to assign $N$ a prior distribution that places equal weight on the integers from 1 up to some large number that is known to be much larger than the true value of $N$, which I will call `Nmax`. This can be implemented with the function `dcat()`. The portion of the code defining these prior distributions would look like this:
+```{r eval=FALSE, echo=TRUE}
+  # Prior distributions
+  p ~ dunif(0,1)
+  N0 ~ dcat(pN0)
+```
+Here `pN` is a vector of 1s of length `Nmax`, meaning that the values from 1 up to `Nmax` are equally likely (any repeated value would produce the same results).
+
+Putting this together, the full model is given by:
+```{r eval=FALSE, echo=TRUE}
+model{
+  # Data distribution
+  m ~ dbinom(p,n1)
+  n2 ~ dbinom(p,N0)
+  
+  # Prior distributions
+  p ~ dunif(0,1)
+  N0 ~ dcat(pN0)
+}
+```
+
+Unfortunately, there is a problem with this model and it won't run in JAGS. The problem is that JAGS, and other MCMC samplers, require that the number of trials in a binomial is known. In our model, the number of trials in the distribution of $n_2$, $N_0$, is not known and so the model won't run. There are a couple of ways to solve this problem. The simplest is to use the fact that if the number of trials is large then a binomial distribution with parameters $n$ and $p$ can be approximated by a Poisson distribution with mean $np$ (I don't expect you to know this, though you may have seen this before). The new model becomes:
+```{r eval=FALSE, echo=TRUE}
+model{
+  # Data distribution
+  m ~ dbinom(p,n1)
+  n2 ~ dpois(p * N0)
+  
+  # Prior distributions
+  p ~ dunif(0,1)
+  N0 ~ dcat(pN0)
+  
+  # Derived variables
+  N <- n1 + N0
+}
+```
+I have also added a line of code to compute the total population size as a derived variable, $N=n_1 + N_0$. Note that this solution only works when the population size is large. There is another solution that works in all cases, but it is more technical. This code is provided in the file `Examples/Example_5/example_5a.jags`.
+
+##### Example 5: Two-Sample Experiment
+Suppose that a two-sample experiment is conducted and that 30 individuals are captured in the first sample ($n_1$), 37 unmarked individuals are captured in the second sample ($n_2$), and that of the 30 captured in the first sample 14 are also captured in the second sample ($m$). The LP estimate for the population size given these values is 109 (after rounding) and the Chapman estimate is 106.
+
+The model can be run in JAGS with the following code:
+```{r echo=TRUE, eval=FALSE}
+## Construct JAGS data
+jags_data_5a <- list(n1 = 30, n2 = 37, m = 14, pN0 = rep(1,1000))
+  
+## Compile model
+jags_model_5a <- jags.model("Examples/Example_5/example_5a.jags", jags_data_5a)
+
+## Generate samples
+jags_samples_5a <- coda.samples(jags_model_5a, c("p","N"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_5a)
+```
+You should find that the posterior mean for $N_0$ is about 117 and that the 95% credible interval extends from about 82 to 176. Again, your exact results may differ somewhat because of random variations in the sampling. 
+
+Once again, we can visualize the summary statistics with a caterpillar plot:
+```{r, echo=TRUE, eval=FALSE}
+## Create ggs object
+ggs_5a <- ggs(jags_samples_5a)
+
+## Draw caterpillar plot
+ggs_caterpillar(ggs_5a)
+```
+In this case, the two parameters are on very different scales. This makes it impossible to visualize the summary statistics together. Instead, we can separate the plots with the following code:
+```{r echo = TRUE, eval=FALSE}
+## Draw caterpillar plot for N
+ggs_caterpillar(ggs_5a, "N")
+
+## Draw caterpillar plot for p
+ggs_caterpillar(ggs_5a, "p")
+```
+
+#### More than Two Samples -- Constant $p$
+
+Suppose now that more than two samples are taken from the population. Each time a sample is taken we record the identities of any individuals that were captured and marked in a previous sample, mark any newly captured individuals, and return all of the individuals back into the population. The times when the samples are taken are called the capture occasions. The data from this experiment can be recorded in the form of a capture history for each individual -- a string of 0s and 1s indicating on which occasions the individual was captured. For example, if an experiment had 5 capture occasions then the history 10101 would indicate that the individual was captured on three occasion -- the first (when it was marked), the third, and the fifth. 
+
+We'll start by assuming that the capture probability is the same on all occasions, and again denote this with $p$. This is often referred to as having constant $p$. In this case, the probability that an individual is captured at least once is $p_\mbox{ever}=1-(1-p)^K$ where $K$ represents the number of capture occasion. The number of individuals captured at least once during the experiment then follows a binomial distribution with parameters $N$ and $p_\mbox{ever}$. Moreover, the capture histories for the captured individuals form a sequence of Bernoulli trials (binomials of size one) with probability $p$. 
+
+Let $n$ denote the number of individuals captured at least once during the experiment. The data component of this model can be written as:
+```{r eval=FALSE,echo=TRUE}
+# Data distribution
+  n ~ dbinom(p_ever,N)
+  
+  for(i in 1:n){
+    for(k in 1:K){
+      caps[i,k] ~ dbern(p)
+    }  
+  }
+  
+  # Derived variables
+  p_ever <- 1 - (1-p)^K
+```
+The same prior distributions can be applied to this model as in Example 5, and so we can write the full model as
+```{reval=FALSE,echo=TRUE}
+model{
+  # Data distribution
+  n ~ dbinom(p_ever,N)
+  
+  for(i in 1:n){
+    for(k in 1:K){
+      caps[i,k] ~ dbern(p)
+    }  
+  }
+  
+  # Derived variables
+  p_ever <- 1 - (1-p)^K
+  
+  # Prior distribution
+  p ~ dunif(0,1)
+  
+  N ~ dcat(pN)
+}
+```
+The code is also provided in the file `Examples/Example_6/example_6a.jags`.
+
+###### Example 6: More than two samples
+
+As an example we will analyse a simulated data set, so we know the true population size. I generated the data with 5 capture occasions and a true population size of 123. A total of 105 individuals were captured at least once and the capture histories for the first three individuals look like this:
+```{r echo = FALSE, eval=TRUE}
+## Load data
+data6 <- readRDS("Examples/Example_6/example_6_data.rds")
+
+head(data6,3)
+```
+The full data is in the file `Examples/Example_6/example_6_data.rds`.
+
+The following code will fit the model and generate summary statistics. Note that I have set the values of $n$, the number of individuals observed, and $K$, the number of capture histories, manually, but you could modify the code to compute these from the data. Once again, we need to set the initial value for $N$ to ensure the code will run. 
+```{r, echo=TRUE,eval=FALSE}
+## Load data
+data6 <- readRDS("Examples/Example_6/example_6_data.rds")
+
+## Construct JAGS data
+jags_data_6 <- list(n = 105, K = 5, caps = data6, pN=rep(1,1000))
+
+## Set initial values
+jags_inits_6 <- list(N = 106)
+
+## Compile model
+jags_model_6a <- jags.model("Examples/Example_6/example_6a.jags", jags_data_6, inits = jags_inits_6)
+
+## Generate samples
+jags_samples_6a <- coda.samples(jags_model_6a, c("p","N"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_6a)
+```
+You should find that the posterior mean of $N$ is about 118, which is very close to the truth, and that the 95% credible interval extends from about 110 to 130. 
+
+Here is the code to create the visualization of the summary statistics using a caterpillar plot:
+```{r echo = TRUE, eval = FALSE}
+## Create ggs object
+ggs_6a <- ggs(jags_samples_6a)
+
+## Draw caterpillar plot for N
+ggs_caterpillar(ggs_6a, "N")
+
+## Draw caterpillar plot for p
+ggs_caterpillar(ggs_6a, "p")
+```
+
+#### More than Two Samples -- Time-Varying $p$
+
+There are many reasons that the capture probability might change across the capture occasions. Perhaps the capture of individuals depends on weather conditions. In this case, we might want the model to allow the capture probability to change over time. This is implemented with the following code:
+```{r echo=TRUE, eval=FALSE}
+model{
+  # Data distribution
+  n ~ dbinom(p_ever,N)
+  
+  for(i in 1:n){
+    for(k in 1:K){
+      caps[i,k] ~ dbern(p[k])
+    }  
+  }
+  
+  # Derived variables
+  p_ever <- 1 - prod(1 - p[1:K])
+  
+  # Prior distribution
+  for(k in 1:K){
+    p[k] ~ dunif(0,1)
+  }
+  
+  N ~ dcat(pN)
+}
+```
+This looks very similar to what we had before, with a few minor changes. First, I have replaced the constant `p` with the occasion specific `p[k]` in the distribution of the capture histories. Second, I have assigned each of the new capture probabilities a separate uniform prior distribution using a loop over `k`. Third, I have modified the calculation of the probability of being captured at least once, `p_ever`, to account for the variation over time. 
+
+#### Example 6 (continued)
+```{r, echo=TRUE,eval=FALSE}
+## Compile model
+jags_model_6b <- jags.model("Examples/Example_6/example_6b.jags", jags_data_6, inits = jags_inits_6)
+
+## Generate samples
+jags_samples_6b <- coda.samples(jags_model_6b, c("p","N"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_6b)
+```
+The output from this model will now display summary statistics for the capture probabilities on each of the 5 occasions. The posterior summary statistics can be visualized with the following code:
+```{r echo=TRUE, eval=FALSE}
+## Create ggs object
+ggs_6b <- ggs(jags_samples_6b)
+
+## Draw caterpillar plot for N
+ggs_caterpillar(ggs_6b, "N", sort = FALSE)
+
+## Draw caterpillar plot for p
+ggs_caterpillar(ggs_6b, "p", sort = FALSE)
+```
+
+#### More than Two Samples -- Hierarchical $p$
+
+The constant $p$ and time-varying $p$ models represent two ends of the spectrum. In one case, we assume that the capture probability is exactly the same on each occasion. In the other, we let the capture probabilities vary completely separately from one another. However, the truth is likely to be somewhere in between. Even if the capture probabilities are not identical, if you capture individuals from the same population in the same way then the capture probabilities are likely to be similar. E.g., if the probability of capturing an individual on the first occasion is .1 then it seems unlikely that the probability will jump to .9 on the next occasion.
+
+This situation can be described with a hierarchical model. A hierarchical model is constructed by assigning parameters a common prior distribution, but allowing the parameters of this prior distribution to be unknown and assigned a further prior distribution (sometimes called the hyperprior). 
+
+An appropriate prior distribution to create a hierarchy for the capture probabilities is the beta distribution. Like the uniform distribution, the beta distribution is confined to the interval from 0 to 1, so it is appropriate for modelling probabilities. The beta distribution has two parameters, commonly labelled $\alpha$ and $\beta$. The mean is $\alpha/(\alpha + \beta)$ and the variance is
+$$
+\frac{\alpha\beta}{(\alpha + \beta)^2(\alpha + \beta + 1)}.
+$$
+Setting $\alpha=\beta=1$ recreates the uniform distribution. As $\alpha$ and $\beta$ increase the distribution becomes more concentrated around a single peak. Some examples are shown below for each combination of the values $\alpha = 2,8$ and $\beta = 2,8$.
+
+```{r eval=TRUE, echo=FALSE}
+mydata <- crossing(alpha = c(2,8),
+                   beta = c(2,8),
+                   p = seq(0,1,length = 101)) %>%
+  mutate(Probability = dbeta(p,alpha,beta))
+
+mydata %>%
+  ggplot(aes(x = p, y = Probability)) +
+  geom_line() + 
+  facet_grid(alpha ~ beta) + 
+  ylab("Probability Density")
+```
+
+##### Example 6 (continued)
+The following code implements the closed population mark-recapture model with the hierarichal model for $p$:
+```{r echo=TRUE, eval = FALSE}
+model{
+  # Data distribution
+  n ~ dbinom(p_ever,N)
+  
+  for(i in 1:n){
+    for(k in 1:K){
+      caps[i,k] ~ dbern(p[k])
+    }  
+  }
+  
+  # Derived variables
+  p_ever <- 1 - prod(1 - p[1:K])
+  
+  # Prior distribution
+  for(k in 1:K){
+    p[k] ~ dbeta(alpha,beta)
+  }
+  alpha ~ dgamma(.1,.1)
+  beta ~ dgamma(.1,.1)
+  
+  N ~ dcat(pN)
+}
+```
+Here I have replaced the uniform prior distribution for `p[k]` with the beta distribution with parameters `alpha` and `beta`. I have then assigned `alpha` and `beta` their own prior distributions. In this case, I have assigned both parameters to have gamma prior distributions. I won't go into specifics, but this is a common choice of prior for parameters that can be any positive number. 
+
+The following code will run the model in `R`:
+```{r, echo=TRUE,eval=FALSE}
+## Compile model
+jags_model_6c <- jags.model("Examples/Example_6/example_6c.jags", jags_data_6, inits = jags_inits_6)
+
+## Generate samples
+jags_samples_6c <- coda.samples(jags_model_6c, c("alpha","beta","N"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_6c)
+```
+Note that this time I monitored not the individual capture probabilities but the parameters `alpha` and `beta`. This allows us to describe the distribution of the capture probabilities over all occasions instead of commenting on the value of the capture probability for a specific occasion. You should find that the estimates of these parameters (the posterior means) are about 5 and 9. Given these values, we could say that the mean capture probability is $5/(5 + 9)=.36$. Using the function `qbeta()` in `R` we could compute the quantiles of the distribution:
+```{r, eval = TRUE, echo = TRUE}
+## Compute the 2.5% and 97.5%-iles of the distribution of p
+qbeta(c(.025,.975), 5, 9)
+```
+If we were to collect another sample then we would guess that the capture probability would be about .36 and we could be 95% certain that it would be between about .14 and .61. You can replace the values 5 and 9 with the values from your summary to obtain specific results. 
+
+### Open Populations
+
+A population is said to be open if individual can enter (by birth or immigration) or leave (by death or emigration) during the course of the experiment. Open populations are more difficult to work with because we need to model the dynamics of the population as well as the capture of individuals on the different occasions.
+
+#### Cormack-Jolly-Seber Model
+
+The basis for all mark-recapture models of dat from studies of open populations is the Cormack-Jolly-Seber or CJS model. The CJS model is based on the following assumptions about how individuals behave and how individuals are captured:
+
+- Survival
+    1. All individuals alive on one occasion have the same probability of survival to the next occasion (commonly denoted by $\phi_t$).
+    2. Whether or not one individual survives from one occasion to the next occasion is not affected by its past survival or the survival of other individuals.
+        
+- Capture
+    1. All individuals alive on one occasion have the same probability of being captured (commonly denotedy by $p_t$). 
+    2. Whether or not one individual is captured on one occasion is not affected by whether it was captured on any past occasions or by the capture of other individuals. 
+        
+##### Example 7: Dippers
+```{r}
+load("Examples/Example_7/dipper.rda")
+
+```
+As an example, we will look at a data on the European dipper collected in France and originally described by Lebreton et al. (1992). The data contain records on the capture of 294 dippers over 7 occasions. To start, we will look at the data only from the individuals that were captured on the first occasion. We will then extend the model to account for all of the individuals.
+
+#### Latent Variables
+
+One of the things that makes Bayesian inference and MCMC sampling so powerful are the ease with which they handle what are called latent variables. Latent variables are extra variables that can be added to a model to describe the state of an individual or a population, but that cannot be observed. 
+
+Consider the assumptions of the CJS model listed above. Both the survival and capture of individuals are defined conditional on being alive. Let $Z_{i,t}$ by an indicator variable so that $Z_{i,t}=1$ in individual $i$ is alive on occasion $t$ and $Z_{i,t}=0$ if the individual is not alive, and let $Y_{i,t}=1$ if individual $i$ is captured on occasion $t$ and $Y_{i,t}=0$ if it is not captured on occasion $t$. The first assumption about survival implies that the probability that $Z_{i,2}=1$ given that $Z_{i,1}=1$ is equal to $\phi_1$, the probability that $Z_{i,3}=1$ given that $Z_{i,2}=1$ is equal to $\phi_2$, etc. The first assumption about capture implies that the probability that $Y_{i,1}=1$ given that $Z_{i,1}=1$ is equal to $p_1$, the probability that $Y_{i,2}=1$ given that $Z_{i,2}=1$ is equal to $p_2$, etc. 
+
+We might draw the DAG for the CJS model like this:
+
+![DAG for Two-Sample $t$-test](Figures/cjs_dag.png){width=500px}
+
+Mathematically, we can describe the relationships by the statements
+$$
+P(Z_{i,t+1}=1|Z_{i,t}=1)=\phi_t
+$$
+and 
+$$
+P(Y_{i,t}=1|Z_{i,t}=1)=p_t.
+$$
+The problem is that we can't always know when an individual is alive. If it is last seen on occasion 2, or example, then it might have dead between occasion 2 and occasion 3 or it might have lived from occasion 2 to occasion 3, not been captured on occasion 3, and then died between occasion 3 and occasion 4, or ... . Here, the variables $Z_{i,t}$ represent latent variables because they cannot always be observed. Even though we can't alwys observe these variables, we will include them in our model to because this makes the definition of the data distribution much, much simpler.
+
+##### Example 7 (continued): Dippers
+
+The following code implements the CJS model for the case in which all individuals are captured and marked on the first occasion. The code is included in the file `Examples/Example_7/example_7a.jags`. The first block of code implements the relationships between being alive on one occasion and both capture on the same occasion and remaining alive on the next occasion. The second block of code defines the prior distributions. I have again employed hierarchical distributions for the survival probability and the capture probability. Note that the capture probability is only included for occasions 2 through 7. This is because information about the capture probability comes from recapturing indivdiuals that were marked on previous occasions. The data contain no information about the capture probability on the first occasion since there are no marked individuals before this point.
+```{r echo = TRUE, eval = FALSE}
+model{
+  ## Data distribution
+  for(i in 1:n){
+    ## Survival 
+    for(t in 1:6){
+      Z[i,t+1] ~ dbern(phi[t] * Z[i,t])
+    }
+    
+    ## Capture
+    for(t in 2:7){
+      Y[i,t] ~ dbern(p[t] * Z[i,t])
+    }
+  }
+
+  ## Prior distributions
+  for(t in 1:6){
+    phi[t] ~ dbeta(alpha.phi, beta.phi)
+  }
+
+  alpha.phi ~ dgamma(.1,.1)
+  beta.phi ~ dgamma(.1,.1)
+  
+  for(t in 2:7){
+    p[t] ~ dbeta(alpha.p, beta.p)
+  }
+  
+  alpha.p ~ dgamma(.1,.1)
+  beta.p ~ dgamma(.1,.1)
+}
+```
+
+Now you can load the dipper data and run the model:
+```{r,echo=TRUE, eval = FALSE}
+## Load data
+dipper1 <- read_csv("Examples/Example_7/dipper1.csv")
+
+## Construct JAGS data
+jags_data_7a <- list(n = 22, 
+                    Y = as.matrix(dipper1[,3:9]))
+
+## Set initial values
+jags_inits_7a <- list(Z=cbind(NA,matrix(1, nrow = 22, ncol = 6)))
+
+## Compile model
+jags_model_7a <- jags.model("Examples/Example_7/example_7a.jags", jags_data_7a, inits = jags_inits_7a)
+
+## Generate samples
+jags_samples_7a <- coda.samples(jags_model_7a, c("psurv","pcap"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_7a)
+```
+
+```{r echo = TRUE, eval = FALSE}
+## Load packages
+library(ggmcmc)
+
+## Plot estimates of survival probabilities
+ggs_7a <- ggs(jags_samples_7a)
+
+ggs_caterpillar(ggs_7a, "phi", sort = FALSE)
+
+ggs_caterpillar(ggs_7a, "p\\[", sort = FALSE)
+
+```
+
+##### Example 7 (continued): Dippers
+
+```{r echo = TRUE, eval = FALSE}
+## Load data
+dipper2 <- read_csv("Examples/Example_7/dipper2.csv")
+
+## Construct JAGS data
+Y <- as.matrix(dipper2[,3:9])
+a <- apply(Y, 1, function(c) min(which(c == 1)))
+
+jags_data_7b <- list(n = 254, Y = Y, a = a)
+
+## Set initial values
+Z <- t(sapply(a, function(a) c(rep(NA,a), rep(1,7-a))))
+
+jags_inits_7b <- list(Z=Z)
+
+## Compile model
+jags_model_7b <- jags.model("Examples/Example_7/example_7b.jags", jags_data_7b, inits = jags_inits_7b)
+
+## Generate samples
+jags_samples_7b <- coda.samples(jags_model_7b, c("p","phi"), n.iter = 1000)
+
+## Compute summary statistics
+summary(jags_samples_7b)
+```
+
+```{r echo = TRUE, eval = FALSE}
+## Plot estimates of survival probabilities
+ggs_7b <- ggs(jags_samples_7b)
+
+ggs_caterpillar(ggs_7b, "phi", sort = FALSE)
+
+ggs_caterpillar(ggs_7b, "p\\[", sort = FALSE)
+
+```
 
 ## Markov chain Monte Carlo {.tabset}
 
