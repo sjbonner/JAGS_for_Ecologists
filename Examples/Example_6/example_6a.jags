@@ -1,0 +1,18 @@
+model{
+  # Data distribution
+  n ~ dbinom(p_ever,N)
+  
+  for(i in 1:n){
+    for(k in 1:K){
+      caps[i,k] ~ dbern(p)
+    }  
+  }
+  
+  # Derived variables
+  p_ever <- 1 - (1-p)^K
+  
+  # Prior distribution
+  p ~ dunif(0,1)
+  
+  N ~ dcat(pN)
+}

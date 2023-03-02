@@ -1,0 +1,12 @@
+model{
+  # Data distribution
+  m ~ dbinom(p,n1)
+  n2 ~ dpois(p * N0)
+  
+  # Prior distribution
+  p ~ dunif(0,1)
+  N0 ~ dcat(pN0)
+  
+  # Derived variables
+  N <- n1 + N0
+}
