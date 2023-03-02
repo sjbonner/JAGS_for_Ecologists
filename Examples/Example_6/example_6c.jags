@@ -1,15 +1,11 @@
 model{
   # Data distribution
-  n ~ dbinom(p_ever,N)
-  
-  for(i in 1:n){
-    for(k in 1:K){
-      caps[i,k] ~ dbern(p[k])
-    }  
+  for(i in 1:(M+n)){
+      alive[i] ~ dbern(psi)
+      for(k in 1:K){
+        caps[i,k] ~ dbern(alive[i] * p[k])
+      }
   }
-  
-  # Derived variables
-  p_ever <- 1 - prod(1 - p[1:K])
   
   # Prior distribution
   for(k in 1:K){
@@ -18,5 +14,8 @@ model{
   alpha ~ dgamma(.1,.1)
   beta ~ dgamma(.1,.1)
   
-  N ~ dcat(pN)
+  psi ~ dunif(0,1)
+  
+  # Derived variables
+  N <- sum(alive[1:(M+n)])
 }
