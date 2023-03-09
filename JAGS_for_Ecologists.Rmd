@@ -25,11 +25,14 @@ knitr::opts_chunk$set(echo = FALSE,
 ## Load packages 
 library(tidyverse)
 library(knitr)
+library(coda)
 ```
 
 # Introduction to Bayesian Inference with JAGS for Ecologists {.tabset}
 
-## Welcome!
+## Getting Started  {.tabset}
+
+### Welcome!
 
 Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent book on Bayesian statistics, and my goal is not to try to reproduce all of the content they contain. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. 
 
@@ -44,6 +47,16 @@ The workshop is designed to allow you to work at you own pace. The material is d
 Please don't hesitate to ask any questions.
 
 Simon
+
+### Setting Up
+
+#### Packages
+
+You will need to have the `R` packages `coda`, `rjags`, and `ggmcmc` installed to run the code in this workshop. You can install these with the function `install.packages()` in the `R` console or using the `install` button from the `Packages` pane in `RStudio`. I suggest that you install these now so that you don't get hung up on this later. Let me know if you need any help with this.
+
+#### Working directory
+
+You will also need to set your working directory in `R` to the location of *this file* to access the files for the examples. You can set the working directory using the menu command `Session > Set Working Directory > Choose Directory...` in `RStudio`. Alternatively, you can use the command `setwd()` in the `R` console. 
 
 
 ## Introducing JAGS {.tabset}
@@ -128,8 +141,6 @@ Suppose that a population of 100 individuals contains 25 individuals with genoty
 1) What is the probability that a randomly selected individual has at least one copy of the recessive allele?
 
 2) What is the probability that a randomly selected individual has at least one copy of the recessive allele give that they have brown eyes?
-
-
 
 ### Basic JAGS syntax
 
@@ -659,7 +670,7 @@ One of the things that makes Bayesian inference and MCMC sampling so powerful ar
 
 Consider the assumptions of the CJS model listed above. Both the survival and capture of individuals are defined conditional on being alive. Let $Z_{i,t}$ by an indicator variable so that $Z_{i,t}=1$ in individual $i$ is alive on occasion $t$ and $Z_{i,t}=0$ if the individual is not alive, and let $Y_{i,t}=1$ if individual $i$ is captured on occasion $t$ and $Y_{i,t}=0$ if it is not captured on occasion $t$. The first assumption about survival implies that the probability that $Z_{i,2}=1$ given that $Z_{i,1}=1$ is equal to $\phi_1$, the probability that $Z_{i,3}=1$ given that $Z_{i,2}=1$ is equal to $\phi_2$, etc. The first assumption about capture implies that the probability that $Y_{i,1}=1$ given that $Z_{i,1}=1$ is equal to $p_1$, the probability that $Y_{i,2}=1$ given that $Z_{i,2}=1$ is equal to $p_2$, etc. 
 
-We might draw the DAG for the CJS model like this:
+We might draw the DAG for the CJS model of the dipper data like this:
 
 <center>
 
@@ -756,11 +767,192 @@ The results provide strong evidence that the survival of the dippers was lower d
 
 ## Markov chain Monte Carlo {.tabset}
 
-### Initial Values and Burnin
+<center>
 
-Recall that JAGS samples from the conditional distribution of a node given the current values of its parents and children. This makes sense once all of the nodes have values, but how are the first values generated? The answer is that JAGS generates initial values for each of the unobserved nodes. It tries to do so in a sensible way, but it can be difficult to sample consistent values for all of the nodes in a complex model. 
+![Wooly Bear Caterpillar](Figures/woolly-bear-caterpillar-2-1363489.jpg){width=500px}
 
-One thing this means is that the initial values may not match well with the posterior distribution. The theory of MCMC says that by resampling the values of the unobserved nodes from their conditional distributions will eventually lead to samples that match with the posterior distribution, but this could take many iterations. The result is that the sampler will have to be run for a number of iterations before it generates samples from the posterior distribution. This period is called the burnin phase, and the values drawn during the burnin need to be discarded from the sample.   
+</center>
+
+
+### Markov Chains
+
+To understand how JAGS works, you need to know a little about Markov chains. A Markov chain is a sequence of random events in which the event that occurs at one point in time depends only on the value at the previous point in time. There is a classic example called the drunkard's walk -- which considers a process in two dimensions. For convenience, I'll work with one dimension, so I will call this the drunkard's tightrope. 
+
+Imagine a drunk (or otherwise inebriated) individual stumbling around on a tightrope. The individual starts in the middle of the tightrope, call it position 0, and every second the individual takes a step in one left or right with equal probability. The location of the individual at one time, call it time $t$, depends only on the location of the individual on the previous time point, $t-1$. Suppose that the individual is at location $x$ at time $t-1$. There are lots of different paths that the individual could have followed to get to that point. However, where they go nest doesn't depend on which path they took. Given that they are at $x$ they will next move to the right, $x+1$, or to the left, $x-1$, with equal probability. 
+
+Here is an example of one path in the random tightrope over 100 steps. In this case, I have bounded the tightrope between -10 and 10 so that the individual has to go right if they reach -10 and has to go left if they reach 10. 
+```{r,cache=TRUE}
+## Draw a drunkards walk
+K <- 100
+x <- c(0,rep(NA,K))
+
+for(k in 2:(K+1)){
+  p <- c((x[k-1] > -10), (x[k-1] < 10))
+  
+  d <- sample(1:2,1,prob = p)
+  
+  x[k] <- x[k-1] + (d == 2) - (d == 1)
+ }
+
+walk <- tibble(Time = 0:K,
+               x = x)
+
+walk %>%
+  ggplot(aes(x= Time, y = x)) + 
+  geom_line()
+```
+
+If we run the process for a long time then we can look at the distribution of the individual's location over time by computing the frequency of times they are at each location. The plot below shows the number of times spent at each location on the bounded tight rope over 100,000 steps. 
+```{r,cache=TRUE}
+## Draw a drunkards walk
+K <- 1e5
+x <- c(0,rep(NA,K))
+
+for(k in 2:(K+1)){
+  p <- c((x[k-1] > -10), (x[k-1] < 10))
+  
+  d <- sample(1:2,1,prob = p)
+  
+  x[k] <- x[k-1] + (d == 2) - (d == 1)
+}
+
+walk <- tibble(Time = 0:K,
+               x = x)
+
+walk %>%
+  ggplot(aes(x = x)) +
+  geom_histogram(bins = 21)
+```
+You can see that the individual spends about the same amount of time at each location, except at the very ends where they spend half as much time. In fact, if we ran this long enough then they would spend exactly the same amount of time for each point from -9 to 9 and exactly half that amount of time at the ends. 
+
+Suppose now that the individual is more likely to move left when they are close to the right side of the rope and vice versa.  Here is the new histogram of the amount of time the individual spends at each location.
+```{r,cache=TRUE}
+## Draw a drunkards walk
+K <- 1e5
+x <- c(0,rep(NA,K))
+
+for(k in 2:(K+1)){
+  p <- c((x[k-1] > -10), (x[k-1] < 10)) *
+    (c(1,1) + 
+       .5 * c(x[k-1] > 0, x[k-1]<0))
+  
+  d <- sample(1:2,1,prob = p)
+  
+  x[k] <- x[k-1] + (d == 2) - (d == 1)
+}
+
+walk <- tibble(Time = 0:K,
+               x = x)
+
+walk %>%
+  ggplot(aes(x = x)) +
+  geom_histogram(bins = 21)
+```
+You can see that the individual now spends most of the time in the middle of the rope and less at the sides. If the individual is more likely to go toward the closest endpoint instead then the histogram would look like this.
+```{r,cache=TRUE}
+## Draw a drunkards walk
+K <- 1e5
+x <- c(0,rep(NA,K))
+
+for(k in 2:(K+1)){
+  p <- c((x[k-1] > -10), (x[k-1] < 10)) *
+    (c(1,1) + 
+       .5 * c(x[k-1] < 0, x[k-1]>0))
+  
+  d <- sample(1:2,1,prob = p)
+  
+  x[k] <- x[k-1] + (d == 2) - (d == 1)
+
+}
+
+walk <- tibble(Time = 0:K,
+               x = x)
+
+walk %>%
+  ggplot(aes(x = x)) +
+  geom_histogram(bins = 21)
+```
+In fact, we can make the distribution look like almost anything we want by varying how the probabilities of the different steps depends on the individual's current location.
+
+In essence, this is what JAGS is doing. JAGS is constructing a Markov chain (a random walk) through the space of random variables. However, it is doing it in such a way that the distribution of the points sampled along the random walk matches the distribution of interest.
+
+### Traceplots
+
+One way to look at this is to create of the sampled values vs the iteration number -- called traceplots. The following code creates traceplots for the two survival probabilities in the last model of the dipper data. 
+```{r,echo = TRUE, eval = FALSE}
+## Create traceplots for survival probabilities
+ggs_traceplot(ggs_7b, family = "psurv")
+```
+Your plots should look something like this (again they will differ because of random variation in the sampling):
+```{r,echo = FALSE, eval = TRUE}
+## Load previous output
+jags_samples_7b <- read_rds("Output/example_7b_jags_samples.rds")
+ggs_7b <- ggs(jags_samples_7b)
+
+## Create traceplots for survival probabilities
+ggs_traceplot(ggs_7b, family = "psurv")
+```
+The trace for each parameter moves up and down within a vertical band bounded by the extents close to the endpoints of the 95% credible intervals for the parameters. Technically, this is called a hairy caterpillar, and it is exactly what you would like to see. It suggests that there is little dependence in the sampled values (i.e., our drunk can leap from one and of the tightrope to the other and anywhere in between at will). This is good because it means that the samples will quickly cover the entire range of the parameters.
+
+However, your traces will not always be as good as this. Often, you will see something like this instead for one or more of the parameters:
+```{r, eval = TRUE, echo = FALSE}
+## An ideal trace
+plotdf1 <- tibble(Iteration = 0:999,
+                  mu = c((0:100)/10,rep(10,899)),
+                  theta = rnorm(1000,mu,.25) + 
+                    rep(rnorm(500,0,.25),each = 2) + 
+                    rep(rnorm(250,0,.5),each = 4) + 
+                    rep(rnorm(125,0,1),each = 8))
+
+plotdf1 %>%
+  ggplot(aes(x=Iteration, y = theta)) + 
+  geom_line() +
+  ylab("Parameter")
+```
+The concerns illustrated in these plot relate to the issues of the convergence and mixing of the chain. 
+
+### Convergence and Initial Values
+
+Convergence refers to whether or not the chain is sampling from the correct (or close to the correct) distribution. The important distributional results for Markov chains says that the distribution of the values sampled on the $k$-th iteration will get closer and closer to the target distribution as $k$ increases. Practically, this means that we can treat the values as a sample from the target distribution if $k$ is large enough. However, how large $k$ has to be is uncertain. The best way to check this is to run multiple chains (usually 3) from multiple starting values and see when they coalesce. Values sampled on earlier iterations should be discarded before making inference. The period of discarded values is called the burn-in of the chain. 
+
+Consider the following plot showing the traces of three chains for the same parameter started at different initial values:
+```{r}
+## An ideal trace
+plotdf2 <- crossing(Iteration = 0:1000,
+                  Chain = factor(1:3)) %>%
+  arrange(Chain) %>%
+  mutate(mu = c((0:300)/30,rep(10,700),
+                10 + (300:0)/30,rep(10,700),
+                rep(10,1001)),
+         theta = rnorm(3003, mu, 2))
+           
+                  
+plotdf2 %>%
+  ggplot(aes(x=Iteration, y = theta, colour = Chain)) + 
+  geom_line() +
+  ylab("Parameter")
+```
+The chains appear to converge (come together) somewhere around iteration 250 and they seem to sample from the same region after that. In this case, the first 250 iterations would be removed from each chain and inference would be based on the remaining 750 iterations from each chain (2250 samples in total). 
+
+### Mixing
+
+Mixing refers to how well a chain moves through the parameter space. This does not affect inference directly, means, standard deviations, and quantiles computed from the sample are valid estimates of the true means, standard deviations, and quantiles. However, their variances will be bigger (possibly much bigger) than if they were computed from a sample of independent values. This means that you need to generate more samples to get the same amount of information about the parameters. 
+
+One way to visualize this is to look at the auto-correlation function (ACF) for each parameter. The auto-correlation measures the correlation between samples different numbers of iterations apart (at different lags). If the samples are indepenent then the auto-correlation will be 0 for all lags. The following code uses functions from `ggmcmc` to plot the ACF for the survival probabilities versus lag:
+```{r, eval = TRUE, echo = TRUE}
+## Plot the ACF of mu and sigma squared
+ggs_autocorrelation(ggs_7b, "psurv")
+```
+The plots show that the auto-correlation is small for lags higher than 10, but for smaller lags the correlation goes as high as .5 (the correlation at lag 0 will always be 1, so you can ignore the first bar). This means that the samples are not perfectly independent.
+
+Another way to look at this is to compute the effective sample size which can be computed with the function `effectiveSize()` from the `coda` package. The effective sample size asks the question: How many independent samples would I need to generate to obtain the same amount of information as in my sample? The following code computes the effective sample sizes:
+```{r}
+## Compute effective sample sizes
+effectiveSize(jags_samples_7b)
+```
+In my case, I found that the effective sample size was approximately 275 for `psurv[1]` and 480 for `psurv[2]`. This means that the 1000 samples we generated from the distribution contain between 1/4 and 1/2 of the information of an random sample of the same size. 
+
+An important question to ask, and difficult question to answer, is how big a sample we need. Credible intervals are the hardest quantity to estimate accurately because they depend on the behaviour at the edge of the distribution, where we are less likely to sample. A good estimate of the credible interval would require an effective sample size of at least 1000, and probably more if we can. This suggests that we should run the chains for at least 4000 iterations after the burn-in
 
 ## Exercise Solutions {.tabset}
 
