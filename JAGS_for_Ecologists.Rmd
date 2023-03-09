@@ -75,7 +75,7 @@ The true values are 5.0 and .25. Your results should be close to this, but they 
 
 At it's heart, JAGS is doing exactly this, but it is able to simulate from much more complicated distributions then we could work with easily in R. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
 
-### Directed Acyclic Graphs
+### Visualing Statistical Models
 
 Much of the syntax for JAGS will look familiar if you have programmed in R before. However, what JAGS is doing is fundamentally different. R is a functional programming language meaning that it works by providing input to functions that then return output. Some functions may be very complicated, but they are all essentially black-boxes that take some numbers, do some calculations, and spit some new numbers out the other end. 
 
@@ -629,6 +629,12 @@ If we were to collect another sample then we would guess that the capture probab
 
 ### Open Populations
 
+<center>
+
+![European dipper](Figures/dipper.jpeg){width=500px}
+
+</center>
+
 A population is said to be open if individual can enter (by birth or immigration) or leave (by death or emigration) during the course of the experiment. Open populations are more difficult to work with because we need to model the dynamics of the population as well as the capture of individuals on the different occasions.
 
 #### Cormack-Jolly-Seber Model
@@ -644,11 +650,8 @@ The basis for all mark-recapture models of dat from studies of open populations 
     2. Whether or not one individual is captured on one occasion is not affected by whether it was captured on any past occasions or by the capture of other individuals. 
         
 ##### Example 7: Dippers
-```{r}
-load("Examples/Example_7/dipper.rda")
 
-```
-As an example, we will look at a data on the European dipper collected in France and originally described by Lebreton et al. (1992). The data contain records on the capture of 294 dippers over 7 occasions. To start, we will look at the data only from the individuals that were captured on the first occasion. We will then extend the model to account for all of the individuals.
+As an example, we will look at a data on the European dipper collected in France and originally described by Lebreton et al. (1992). The data contain records on the capture of 254 dippers over 7 occasions. 
 
 #### Latent Variables
 
@@ -658,7 +661,11 @@ Consider the assumptions of the CJS model listed above. Both the survival and ca
 
 We might draw the DAG for the CJS model like this:
 
-![DAG for Two-Sample $t$-test](Figures/cjs_dag.png){width=500px}
+<center>
+
+![DAG for CJS Model](Figures/cjs_dag.png){width=500px}
+
+</center>
 
 Mathematically, we can describe the relationships by the statements
 $$
@@ -668,54 +675,25 @@ and
 $$
 P(Y_{i,t}=1|Z_{i,t}=1)=p_t.
 $$
-The problem is that we can't always know when an individual is alive. If it is last seen on occasion 2, or example, then it might have dead between occasion 2 and occasion 3 or it might have lived from occasion 2 to occasion 3, not been captured on occasion 3, and then died between occasion 3 and occasion 4, or ... . Here, the variables $Z_{i,t}$ represent latent variables because they cannot always be observed. Even though we can't alwys observe these variables, we will include them in our model to because this makes the definition of the data distribution much, much simpler.
+The problem is that we can't always know when an individual is alive. If it is last seen on occasion 2, or example, then it might have dead between occasion 2 and occasion 3 or it might have lived from occasion 2 to occasion 3, not been captured on occasion 3, and then died between occasion 3 and occasion 4, or ... . Here, the variables $Z_{i,t}$ represent latent variables because they cannot always be observed. Even though we can't always observe these variables, we will include them in our model to because this makes the definition of the data distribution much, much simpler.
 
 ##### Example 7 (continued): Dippers
 
-The following code implements the CJS model for the case in which all individuals are captured and marked on the first occasion. The code is included in the file `Examples/Example_7/example_7a.jags`. The first block of code implements the relationships between being alive on one occasion and both capture on the same occasion and remaining alive on the next occasion. The second block of code defines the prior distributions. I have again employed hierarchical distributions for the survival probability and the capture probability. Note that the capture probability is only included for occasions 2 through 7. This is because information about the capture probability comes from recapturing indivdiuals that were marked on previous occasions. The data contain no information about the capture probability on the first occasion since there are no marked individuals before this point.
+The code to implement the CJS model is included in the file `Examples/Example_7/example_7a.jags`. You can load the dipper data and run the model:
 ```{r echo = TRUE, eval = FALSE}
-model{
-  ## Data distribution
-  for(i in 1:n){
-    ## Survival 
-    for(t in 1:6){
-      Z[i,t+1] ~ dbern(phi[t] * Z[i,t])
-    }
-    
-    ## Capture
-    for(t in 2:7){
-      Y[i,t] ~ dbern(p[t] * Z[i,t])
-    }
-  }
-
-  ## Prior distributions
-  for(t in 1:6){
-    phi[t] ~ dbeta(alpha.phi, beta.phi)
-  }
-
-  alpha.phi ~ dgamma(.1,.1)
-  beta.phi ~ dgamma(.1,.1)
-  
-  for(t in 2:7){
-    p[t] ~ dbeta(alpha.p, beta.p)
-  }
-  
-  alpha.p ~ dgamma(.1,.1)
-  beta.p ~ dgamma(.1,.1)
-}
-```
-
-Now you can load the dipper data and run the model:
-```{r,echo=TRUE, eval = FALSE}
 ## Load data
-dipper1 <- read_csv("Examples/Example_7/dipper1.csv")
+dipper <- read_csv("Examples/Example_7/dipper.csv")
 
 ## Construct JAGS data
-jags_data_7a <- list(n = 22, 
-                    Y = as.matrix(dipper1[,3:9]))
+Y <- as.matrix(dipper[,3:9])
+a <- apply(Y, 1, function(c) min(which(c == 1)))
+
+jags_data_7a <- list(n = 254, Y = Y, a = a)
 
 ## Set initial values
-jags_inits_7a <- list(Z=cbind(NA,matrix(1, nrow = 22, ncol = 6)))
+Z <- t(sapply(a, function(a) c(rep(NA,a), rep(1,7-a))))
+
+jags_inits_7a <- list(Z=Z)
 
 ## Compile model
 jags_model_7a <- jags.model("Examples/Example_7/example_7a.jags", jags_data_7a, inits = jags_inits_7a)
@@ -728,40 +706,37 @@ summary(jags_samples_7a)
 ```
 
 ```{r echo = TRUE, eval = FALSE}
-## Load packages
-library(ggmcmc)
-
 ## Plot estimates of survival probabilities
 ggs_7a <- ggs(jags_samples_7a)
 
-ggs_caterpillar(ggs_7a, "phi", sort = FALSE)
+ggs_caterpillar(ggs_7a, "psurv", sort = FALSE)
 
-ggs_caterpillar(ggs_7a, "p\\[", sort = FALSE)
+ggs_caterpillar(ggs_7a, "pcap", sort = FALSE)
 
 ```
 
 ##### Example 7 (continued): Dippers
 
+Looking at the plots you just made you should see that survival probability is about the same in years from occasions 1 to 2, 4 to 5, 5 to 6, and 6 to 7. However, the survival probability seems to be lower from occasions 2 to 3 and 3 to 4. The reason this happens is that there was a drought in the study region during this time period which reduced the water levels in the rivers in which the dippers feed.  
+
+Instead of allowing the survival probability to vary over the 7 occasions we can refit the model with only two survival probabilities -- one for the occasions during the drought and one for the other occasions. The DAG for the new model would look like this:
+
+<center>
+
+![DAG for Restricted CJS Model](Figures/cjs_dag_2.png){width=500px}
+
+</center>
+
+The code to implement the CJS model is provided in the file `Examples/Example_7/example_7b.jags`. The vector `sindex` controls which survival probability is used in each period and has the value `1,2,2,1,1,1` where 1 indexes the survival probability in normal times and 2 indexes the survival probability during the drought. You can load the dipper data and run the model:
 ```{r echo = TRUE, eval = FALSE}
-## Load data
-dipper2 <- read_csv("Examples/Example_7/dipper2.csv")
-
-## Construct JAGS data
-Y <- as.matrix(dipper2[,3:9])
-a <- apply(Y, 1, function(c) min(which(c == 1)))
-
-jags_data_7b <- list(n = 254, Y = Y, a = a)
-
-## Set initial values
-Z <- t(sapply(a, function(a) c(rep(NA,a), rep(1,7-a))))
-
-jags_inits_7b <- list(Z=Z)
+## Add sindex to the JAGS data list
+jags_data_7a$sindex <- c(1,2,2,1,1,1)
 
 ## Compile model
-jags_model_7b <- jags.model("Examples/Example_7/example_7b.jags", jags_data_7b, inits = jags_inits_7b)
+jags_model_7b <- jags.model("Examples/Example_7/example_7b.jags", jags_data_7a, inits = jags_inits_7a)
 
 ## Generate samples
-jags_samples_7b <- coda.samples(jags_model_7b, c("p","phi"), n.iter = 1000)
+jags_samples_7b <- coda.samples(jags_model_7b, c("psurv","pcap"), n.iter = 1000)
 
 ## Compute summary statistics
 summary(jags_samples_7b)
@@ -771,11 +746,13 @@ summary(jags_samples_7b)
 ## Plot estimates of survival probabilities
 ggs_7b <- ggs(jags_samples_7b)
 
-ggs_caterpillar(ggs_7b, "phi", sort = FALSE)
+ggs_caterpillar(ggs_7b, "psurv", sort = FALSE)
 
-ggs_caterpillar(ggs_7b, "p\\[", sort = FALSE)
+ggs_caterpillar(ggs_7b, "pcap", sort = FALSE)
 
 ```
+
+The results provide strong evidence that the survival of the dippers was lower during the drought. The estimated survival probability from one occasion to the next is about .61 with 95% credible interval (.54,.68) during normal times but only .47 with 95% credible interval (.38,.56) during the drought.
 
 ## Markov chain Monte Carlo {.tabset}
 
