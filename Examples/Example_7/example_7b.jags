@@ -1,0 +1,27 @@
+model{
+  ## Data distribution
+  for(i in 1:n){
+    ## Survival 
+    Z[i,a[i]] <- 1
+    
+    for(t in a[i]:6){
+      Z[i,t+1] ~ dbern(psurv[sindex[t]] * Z[i,t])
+    }
+    
+    ## Capture
+    for(t in (a[i]+1):7){
+      Y[i,t] ~ dbern(pcap[t] * Z[i,t])
+    }
+  }
+
+  ## Prior distributions
+  psurv[1] ~ dunif(0,1)
+  psurv[2] ~ dunif(0,1)
+  
+  for(t in 2:7){
+    pcap[t] ~ dbeta(alpha.p, beta.p)
+  }
+  
+  alpha.p ~ dgamma(.1,.1)
+  beta.p ~ dgamma(.1,.1)
+}
