@@ -418,70 +418,58 @@ We will look at versions of three different models to illustrate the application
 
 The simplest mark-recapture study is one in which individuals are captured on only two occasions. A sample of individuals are captured on the first occasion, marked, and returned to the population. A second sample is then taken after allowing sufficient time for the marked individuals to mix back into the population (but not so long that individuals can enter or leave the population). This sample will contain both marked and unmarked individuals, and we can use the ratio of marked and unmarked individual to estimate the size of the population.
 
-Let $n_1$ denote the number of individuals captured and marked in the first sample, $n_2$ the number of unmarked individuals captured in the second sample (i.e., the number in the second sample that were not captured in the first sample), $m$ the number of individuals captured in both, and $N$ the unknown population size. One way to estimate the population size is to assume that the proportion of marked individuals captured in the second sample is the same as the proportion of marked individuals in the entire population:
+Let $n_1$ denote the number of individuals captured and marked in the first sample, $n_2$ the number of unmarked individuals captured in the second sample (i.e., the number in the second sample that were not captured in the first sample), $m$ the number of individuals captured in both, and $N$ the unknown population size. One way to estimate the population size is to equate the proportion of marked individuals captured in the second sample is the same as the proportion of marked individuals in the entire population:
 $$
-\frac{m}{n_1 + n_2}=\frac{n_1}{N}.
+\frac{m}{m + n_2}=\frac{n_1}{N}.
 $$
 Solving this equation for $N$ provides the estimator
 $$
 \hat{N}_{LP} = \frac{n_1(m + n_2)}{m}
 $$
-This is commonly known as the Lincoln-Petersen estimator (hence the subscript LP). An alternative estimator that has better statistical properties is the Chapman estimator
-$$
-\hat{N}_{C}=\frac{(n_1+1)(m + n_2+1)}{(m+1)} - 1.
-$$
+This is commonly known as the Lincoln-Petersen estimator (hence the subscript LP). 
+
 To implement this model in the Bayesian frawework we need to describe the distributions of the observed data and then assign prior distributions to the unknown parameters. If we assume that all individuals in the population have the same probability of capture, which I will denote by $p$, then $m$ follows a binomial distribution with parameters $n_1$ and $p$ and $n_2$ follows a binomial distribution with parameters $N-n_1$ and $p$. I will let $N_0=N-n_1$ denote the number of individuals in the population that were not captured and marked in the first sample. The DAG for this model looks like this:
 
 ![DAG for Two-Sample Experiment](Figures/lp_dag.png){width=300px}
+Note that we can estimate the capture probability by $\hat p=m/n_1$ the proportion of marked individuals recaptured on the second occasion. Using this, the Lincoln-Petersen estimator can be re-written as
+$$
+\hat{N}_{LP} = n_1 + \frac{n_2}{\hat p}.
+$$
 
 
 As noted before, the binomial distribution is implemented in JAGS with the function `dbinom()` and so the data portion of the model would look like this:
 ```{r echo=TRUE,eval=FALSE}
   # Data distribution
   m ~ dbinom(p,n1)
-  n2 ~ dbinom(p,N0)
 ```
-Unless we have previous information about the capture probability, we might it a uniform prior from 0 to 1 to indicate that it is equally likely to take any value in its range. The population size has to be an integer, and so we need to be a little careful about how we assign the prior for $N$. One possibility is to assign $N$ a prior distribution that places equal weight on the integers from 1 up to some large number that is known to be much larger than the true value of $N$, which I will call `Nmax`. This can be implemented with the function `dcat()`. The portion of the code defining these prior distributions would look like this:
+Unless we have previous information about the capture probability, we might it a uniform prior from 0 to 1. This distribution indicates that it is equally likely for $p$ to take any value and is coded like this:
 ```{r eval=FALSE, echo=TRUE}
   # Prior distributions
   p ~ dunif(0,1)
-  N0 ~ dcat(pN0)
 ```
-Here `pN` is a vector of 1s of length `Nmax`, meaning that the values from 1 up to `Nmax` are equally likely (any repeated value would produce the same results).
-
+Finally, we can add code to estimate the total population size using the same formula as the Lincoln-Petersen estimator. This is called a derived parameter because it is derived from the values of other parameters in the model (in this case $p$):
+```{r eval=FALSE, echo=TRUE}
+  # Derived variables
+  N <- n1 + n2/p
+```
 Putting this together, the full model is given by:
 ```{r eval=FALSE, echo=TRUE}
 model{
   # Data distribution
   m ~ dbinom(p,n1)
-  n2 ~ dbinom(p,N0)
-  
-  # Prior distributions
-  p ~ dunif(0,1)
-  N0 ~ dcat(pN0)
-}
-```
 
-Unfortunately, there is a problem with this model and it won't run in JAGS. The problem is that JAGS, and other MCMC samplers, require that the number of trials in a binomial is known. In our model, the number of trials in the distribution of $n_2$, $N_0$, is not known and so the model won't run. There are a couple of ways to solve this problem. The simplest is to use the fact that if the number of trials is large then a binomial distribution with parameters $n$ and $p$ can be approximated by a Poisson distribution with mean $np$ (I don't expect you to know this, though you may have seen this before if you have taken a course in probability). The new model becomes:
-```{r eval=FALSE, echo=TRUE}
-model{
-  # Data distribution
-  m ~ dbinom(p,n1)
-  n2 ~ dpois(p * N0)
-  
-  # Prior distributions
+  # Prior distribution
   p ~ dunif(0,1)
-  N0 ~ dcat(pN0)
-  
+
   # Derived variables
-  N <- n1 + N0
+  N <- n1 + n2/p
 }
 ```
-As a caveat, this solution only works when the population size is large. There is another solution that works in all cases, which I'll talk about below. I have also added a line of code to compute the total population size as a derived variable, $N=n_1 + N_0$. The code for this model is provided in the file `Examples/Example_5/example_5a.jags`.
+The code for this model is provided in the file `Examples/Example_5/example_5a.jags`.
 
 ##### Example 5: Snowshoe Hares (Two-Samples)
 
-As an example, we will analyse data from a study of snowshoe hares. Hares were sampled from the population on 6 different occasions, but we will focus just on the first two samples for now. A total of $n_1=16$ hares were captured and marked in the first sample of which $m=4$ were recaptured in the second sample. The second sample also contained a further $n_2=24$ unmarked hares. The LP estimate for the population size given these values is 112 (after rounding) and the Chapman estimate is 98.
+As an example, we will analyse data from a study of snowshoe hares. Hares were sampled from the population on 6 different occasions, but we will focus just on the first two samples for now. A total of $n_1=16$ hares were captured and marked in the first sample of which $m=4$ were recaptured in the second sample. The second sample also contained a further $n_2=24$ unmarked hares. The LP estimate for the population size given these values is 112.
 
 The model can be run in JAGS with the following code:
 ```{r echo=TRUE, eval=FALSE}
@@ -497,24 +485,7 @@ jags_samples_5a <- coda.samples(jags_model_5a, c("p","N"), n.iter = 1000)
 ## Compute summary statistics
 summary(jags_samples_5a)
 ```
-You should find that the posterior mean for $N$ is about 145 and that the 95% credible interval extends from about 70 to 321. Again, your exact results may differ somewhat because of random variations in the sampling. 
-
-Once again, we can visualize the summary statistics with a caterpillar plot:
-```{r, echo=TRUE, eval=FALSE}
-## Create ggs object
-ggs_5a <- ggs(jags_samples_5a)
-
-## Draw caterpillar plot
-ggs_caterpillar(ggs_5a)
-```
-In this case, the two parameters are on very different scales. This makes it impossible to visualize the summary statistics together. Instead, we can separate the plots with the following code:
-```{r echo = TRUE, eval=FALSE}
-## Draw caterpillar plot for N
-ggs_caterpillar(ggs_5a, "N")
-
-## Draw caterpillar plot for p
-ggs_caterpillar(ggs_5a, "p")
-```
+You should find that the posterior mean for $N$ is about 116 and that the 95% credible interval extends from about 60 to 250. Again, your exact results may differ somewhat because of random variations in the sampling. 
 
 #### More than Two Samples -- Constant $p$
 
