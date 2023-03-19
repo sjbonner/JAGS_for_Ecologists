@@ -1,5 +1,4 @@
-
-# Ecological Models {.tabset}
+# Ecological Models 
 
 ## Introduction
 
