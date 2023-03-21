@@ -2,17 +2,17 @@
 
 ## Introduction
 
-We will begin by looking at JAGS and then see how the software can be used in the framework of Bayesian statistics. The core idea behind JAGS is that we can learn about a distribution by repeatedly sampling. 
+We will begin by looking at JAGS and then see how the software can be used in the framework of Bayesian statistics in the next chapter. The core idea behind JAGS is that we can learn about a distribution by repeatedly sampling. 
 
-Consider the problem of tossing a coin repeatedly and counting the number of times it lands heads side up, which I will call $Y$. There is statistical theory that tells us about the distribution of $Y$ -- if the coin is fair then $Y$ has a binomial distribution with parameters equal to the number of tosses and the probability of the coin landing heads side up, which should be .5. We could then use the theoretical distribution to calculate values like the mean (average) number of times the coin lands heads side up on 10 tosses or the probability that the coin lands heads side up on exactly 5 of 10 tosses.
+Consider the problem of tossing a coin repeatedly and counting the number of times it lands heads side up. There is statistical theory that tells us that the number of heads follows a binomial distribution with parameters equal to the number of tosses, commonly denoted by $n$, and the probability of the coin landing heads side up on a single toss, denoted by $p$. If the coin is fair then $p=.5$. We could then use the theoretical distribution to calculate values like the mean (average) number of times the coin lands heads side up on 10 tosses or the probability that the coin lands heads side up on exactly 5 of 10 tosses.
 
-However, you could also estimate these values by simulation. Using a physical simulation, you could repeatedly toss a coin 10 times in a row and count the number of times the coin lands heads side up on each trial. You could then estimate the mean number of times the coin lands heads side up by averaging the observed values. You could estimate the probability that the coin lands heads side up on exactly 5 of 10 tosses by the proportion of times this specific event occurs. 
+However, you could also estimate these values by simulation. Using a physical simulation, you could conduct repeated trials in which you toss a coin 10 times in a row and count the number of times the coin lands heads side up on each trial. You could then estimate the mean number of times the coin lands heads side up by averaging the observed values. You could estimate the probability that the coin lands heads side up on exactly 5 of 10 tosses by the proportion of times this specific event occurs. 
 
-A more efficient method of simulation is to do this on a computer. The following R code will simulate data for the coin tossing problem and estimate the values above:
+This works for tossing a coin, but it's harder to do with real world experiments. Instead, we can simulated the distribution for most problems more efficiently. The following R code will simulate 1000 tirals for the coin tossing problem and estimate the values above:
 ```{r, eval = FALSE, echo = TRUE}
 ## Set parameters
 n <- 10 # Number of tosses per trial
-m <- 100 # Number of trials
+m <- 100 # Number of replicate trials
 
 ## Simulate number of heads
 Y <- rbinom(m, n, .5)
@@ -23,17 +23,33 @@ mean(Y)
 ## Estimate the probability the coin lands heads side up 5 times
 sum(Y == 5)/m
 ```
-The true values are 5.0 and .25. Your results should be close to this, but they will not be exact. You will also get different answers if you repeat the simulation. However, if you increase the number of replicates (`m`), then the results will get closer and closer to the truth. Although there is always some level of variation, if `m` is big enough then the uncertainty will be small enough to ignore. 
+Run the code in `R`. The true values are 5.0 and .25, and your results should be close to this -- but they will not be exact. You will also get different answers if you repeat the simulation. 
 
-At it's heart, JAGS is doing exactly this, but it is able to simulate from much more complicated distributions then we could work with easily in R. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall into the class of Markov chain Monte Carlo or MCMC. Later sections will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax of JAGS, how JAGS can be connected with R, and how to generate simulated data from some simple statistical models. 
+The reason is that there is random variation in the simulation. Each time you run 1000 trials then simulated data will be different. However, if you increase the number of replicates (`m` in the code above), then the results will get closer and closer to the truth. Although there is always some level of variation, if `m` is big enough then the uncertainty will be small enough to ignore. 
+
+JAGS is doing exactly this, but it is able to simulate from much more complicated distributions then we could work with easily in R. The name is an acronym that stands for "Just Another Gibbs Sampler", though Gibbs sampling is just is just one of the methods that it implements.  In general, the sampling methods fall used in JAGS fall into the class of Markov chain Monte Carlo methods or MCMC for short. Section 3 will connect the problem of sampling to Bayesian inference and provide more details on MCMC. However, we'll start by looking at the basic syntax for defining models JAGS and how JAGS can be run `R`. 
 
 ## Visualing Statistical Models
 
-Much of the syntax for JAGS will look familiar if you have programmed in R before. However, what JAGS is doing is fundamentally different. R is a functional programming language meaning that it works by providing input to functions that then return output. Some functions may be very complicated, but they are all essentially black-boxes that take some numbers, do some calculations, and spit some new numbers out the other end. 
+Much of the syntax for JAGS will look familiar if you have programmed in R before. However, the objective is fundamentally different. R is a functional programming language meaning that it works by providing input to functions that then return output which can be passed to new functions in turn. For example, you might load data with `read.csv()` which takes the name of a file as input and returns a data frame as output. You might then pass the data frame to `lm()` which fits a linear regression model and returns summary output. Some functions may be very complicated, but they are all essentially black-boxes that take some inputs (numbers, data frames, vectors etc), do some calculations, and return some outputs (new numbers, data frames, or vectors). 
 
-The purpose of the JAGS language is to define relationship between the variables in a statistical model. Behind the scenes, JAGS is constructing a graph that describes how the variables are connected. The variables are referred to as nodes in the graph, and the nodes belong to one of two types: deterministic or stochastic. A node is deterministic if the value of the node is unique given its inputs. For example, a node that adds to values is deterministic because it will always produce the same sum from the same input. A node is stochastic if its inputs define a distribution from which a value can be drawn. For example, a stochastic node might define a normal distribution which depends on its mean and variance. Each time the sampler is run JAGS will draw a value from the distribution at random, and so the value of the node will change even if the mean and variance supplied are the same. 
+The purpose of the JAGS language is to define the structure of a statistical model. JAGS code does not define a sequence of steps in which objects are passed to funcions that return new objects. Instead, the code defines the relationships between variables in statisical model. Behind the scenes, JAGS is constructing a graph that describes how the variables are connected. The variables are referred to as nodes in the graph, and the nodes belong to one of two types: 
 
-There are also some conditions which the final graph must satisfy. It must be directed and it must be acyclic. Directed simply means that there is a direction to each of the connections in the graph. Each node accepts input from some nodes and passes output on to other nodes. The nodes providing input are called parents and the nodes accepting output are called children. In the example of the normal distribution, the mean and variance are parents and the stochastic node is their child. Acyclic means that you can't ever get back to the same node by following connections in the correct direction. We say that the final graph is a Directed Acyclic Graph or DAG short.
+1) Deterministic Nodes 
+    A node is deterministic if the value of the node is unique given its inputs. For example, a node that is the sum of two values is deterministic because it will always produce the same sum from the same input. 
+    
+2) Stochastic Nodes
+    A node is stochastic if its inputs define a distribution from which a value can be drawn. For example, a stochastic node might define a normal distribution which depends on its mean and variance. Each time the sampler is run JAGS will draw a value from the distribution at random, and so the value of the node will change even if the mean and variance supplied are the same. 
+
+The final graph must also satisfy two conditions to define a valid statistical model:
+
+1) Directed
+    This simply means that there is a direction to each of the connections in the graph. Each node depends on the values of some nodes, called its parents, on is depended on by other nodes, called its children.  In the example of the normal distribution, the mean and variance are parents and the stochastic node is their child. 
+    
+2) Acyclic
+   A graph is cyclic if you can get from any node back to itself by following the connections in the right directions. A graph is acyclic if it isn't cyclic. This means that a node can't be its own parent (or grandparent or great-grandparent or...). 
+   
+We say that the final graph is a Directed Acyclic Graph or DAG short. The streets in a city form a DAG if all streets are one-way and no matter where you start from you can never get home. Don't by a house there!
 
 ### Example 1: Two-Sample Problem
 
@@ -41,35 +57,39 @@ Consider the setup of a two-sample $t$-test. We assume that we have $10$ observa
 
 ![DAG for Two-Sample $t$-test](Figures/dag_1.png){width=300px}
 
-The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly for $Y_{2j}$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
+The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly $Y_{2j}$ depends on $\mu_2$ and $\sigma^2$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
 
 ### Exercise 1: Linear Regression
 
-The simple linear regression model relates the mean of a response to some predictor. Specifically, we assume that the the $i$-th observation, denoted by $Y_i$, follows a normal distribution whose mean, $\mu_i$, is a linear function of the predictor, $x_i$, given by $\mu_i = \beta_0 + \beta_1 x_i$. Here $\beta_0$ is the intercept and $\beta_1$ is the slope. The variance of the response is assumed to be a constant, usually denoted by $\sigma^2$. 
+The simple linear regression model relates the mean of a response to the value of some predictor. Specifically, we assume that the $i$-th observation, denoted by $Y_i$, follows a normal distribution whose mean, $\mu_i$, is a linear function of the predictor, $x_i$, given by 
+$$
+\mu_i = \beta_0 + \beta_1.
+$$
+Here $\beta_0$ is the intercept and $\beta_1$ is the slope. The variance of the response is assumed to be a constant, usually denoted by $\sigma^2$. 
 
 Construct the DAG for a simple linear regression model with $50$ observations. 
 
-Jump to the [solution](#solution1). 
+The [solution](#solution1) is given in the final chapter. 
 
 ## Conditional Distributions
 
 When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children. 
 
 ### Example 2: Craps
-As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 and the largest is 12. the probability of the different outcomes are given in the following table:
+As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 (two 1s) and the largest is 12 (two 6s). The probabilitoes of the different outcomes are given in the following table:
 ```{r}
 ## Craps probabilities
-craps <- tibble(Outcome = as.integer(2:12),
-                Probability = c(1,2,3,4,5,6,5,4,3,2,1)/36)
+craps <- tibble(Outcome = as.character(2:12),
+                Probability = round(c(1,2,3,4,5,6,5,4,3,2,1)/36,3))
 
 t(craps) %>%
   kable(digits = 3)
 ```
-Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the marginal probability of the outcome 5 is .111 and the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. In this case, the conditional probability is higher than the marginal probability. 
+This means that if you roll the pair of die many, many times then the proportion of times the sum equals two will be very close to .028, the proportion of times the sum equals three will be very close to .056, etc. 
 
-We could also ask about the conditional probability for the values of the two die together given that the outcome (their sum) is 5. There are four different configurations of the two die that produce the outcome 5: 1 and 4, 2 and 3, 3 and 2, and 4 and 1. Hence, the probability of each of these configurations given that the sum is 5 is 1/4=.25. 
+Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. If you were to fix the value of the first die to be 3 and roll the second die many, many times then the proportion of times that the sum is 5 would be very close to .167. 
 
-In this case, it is very simple to construct these conditional distributions. However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS essentially solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.  
+In this case, it is very simple to compute the conditional probabilities of different sums given the value of one die or other constraints (e.g., that the number on the first die is even). However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.  
 
 ### Exercise 2: Dominant and Recessive Traits
 
@@ -81,11 +101,13 @@ Suppose that a population of 100 individuals contains 25 individuals with genoty
 
 2) What is the probability that a randomly selected individual has at least one copy of the recessive allele give that they have brown eyes?
 
+The [solution](#solution2) is given in the final chapter. 
+
 ## Basic JAGS syntax
 
 ### Example 1 (continued): Two-Sample Problem
 
-To introduce some of the basic JAGS notation we will look at the code to implement the two-sample setup of Example 1. The code is contained in the file `Examples/Example_1/example_1.jags` and looks like this:
+To introduce some of the basic JAGS notation we will look at the code to implement the two-sample setup of Example 1. This is what the code looks like:
 ```{r, eval=FALSE, echo = TRUE}
 model{
   # Parameters  
@@ -105,15 +127,28 @@ model{
 ```
 Let's break this down.
 
-First, the code must be enclosed in a block of text with `model{` at the top of the file and `}`. This may seem a little odd. However, JAGS also allows a second block enclosed by `data{...}` that defines data manipulations that are to be run before the model is run. We will do all of our data manipulations in `R` so we won't need the second block, but you still need to enclose the code with `model{...}` so JAGS knows where to look.
+1) Model Block
+    First, the code must be enclosed in a block of text starting with `model{` at the top of the file and ending with `}`. This may seem a little odd. However, JAGS also allows a second block enclosed by `data{...}` that defines data manipulations that are to be run before the model is run. We will do all of our data manipulations in `R` so we won't need the second block, but you still need to enclose the code with `model{...}` so JAGS knows where to look.
 
-Each node is defined by a statement of the form `variable ~ definition` or `variable <- definition`. The first form defines a stochastic node and the second defines a deterministic node. In this case, `mu1`, `mu2`, and `sigmasq` represent the values $\mu_1$, $\mu_2$, and $\sigma^2$ and are defined as stochastic nodes. I have given them specific values to make the code complete. On the other hand, $y1[j]$ and $y2[j]$ representing $Y_{1j}$ and $Y_{2j}$ are defined as stochastic nodes. The function `dnorm()` indicates that they are assigned normal distributions, and the function requires two arguments to complete their definitions: their respective means and their precisions (which is the reciprocal of the variance). 
+2) Node Definitions
+    Each node in the model is defined by a statement of the form 
+\begin{center}
+`variable <- definition`.
+\end{center}
+or
+\begin{center}
+`variable ~ definition`
+\end{center}
+The first form defines a deterministic node and the second defines a stochastic node. In the example, `mu1`, `mu2`, and `sigmasq` represent the values $\mu_1$, $\mu_2$, and $\sigma^2$ and are defined as stochastic nodes. I have given them specific values to make the code complete. On the other hand, $y1[j]$ and $y2[j]$ representing $Y_{1j}$ and $Y_{2j}$ are defined as stochastic nodes. The function `dnorm()` indicates that they are assigned normal distributions, and the function requires two arguments to complete their definitions: their respective means and their precisions (one over the variance). 
 
-The lines beginning with the hash symbol (`#`) are comments, just as in `R`. These are ignored by JAGS and have no effect on the output. 
+3) Comments
+    The lines beginning with the hash symbol (`#`) are comments, just as in `R`. These are ignored by JAGS and have no effect on the output. 
 
-The square brackets around `j` in the definition of `y1` and `y2` indicate that these nodes form one-dimensional arrays (i.e. vectors) that are indexed by the value of `j`. Arrays of any size can be constructed by adding more indices separated by commas. For example, `X1[i,j]` would define `X1` to be a two-dimensional array (a matrix) indexed by `i` and `j`, `X2[i,j,k]` would define `X2` to be a three-dimensional array indexed by `i`, `j`, and `k`, etc. In most cases, JAGS will infer the size of an array from the rest of the code so you do not need to define this explicitly. 
+4) Vector Indexes
+    The square brackets around `j` in the definition of `y1` and `y2` indicate that these nodes form one-dimensional arrays (i.e. vectors) that are indexed by the value of `j`. This is useful for organizing data and repeating structures without having to define new nodes. Arrays of any dimension can be constructed by adding more indices separated by commas. For example, `X1[i,j]` would define `X1` to be a two-dimensional array (a matrix) indexed by `i` and `j`, `X2[i,j,k]` would define `X2` to be a three-dimensional array indexed by `i`, `j`, and `k`, etc. In most cases, JAGS will infer the size of an array from the rest of the code so you do not need to define this explicitly. 
 
-Finally, the lines
+5) Loops
+   The lines
 ```{r,echo=TRUE,eval=FALSE}
 for(j in 1:10){
   y1[j] ~ dnorm(mu1,1/sigmasq)
@@ -132,7 +167,7 @@ y1[8] ~ dnorm(mu1,1/sigmasq)
 y1[9] ~ dnorm(mu1,1/sigmasq)
 y1[10] ~ dnorm(mu1,1/sigmasq)
 ```
-instead, but that is awfully tedious. 
+instead, but that is awfully tedious. The second `for` loop defines the distribution of the observations in the second group. 
 
 ## Running JAGS from R
 
@@ -142,10 +177,10 @@ There are several packages that allow you to connect `R` and JAGS. This allows y
 
 ### `jags.model()`
 
-The function `jags.model()` compiles the model and adapts the sampler (which we will discuss later in the section on Markov chain Monte Carlo). The key arguments of the function are:
+The function `jags.model()` compiles the model and adapts the sampler (which we will discuss later in the section on Markov chain Monte Carlo). The two key arguments of the function are:
 
-- `file`: the name of the file containing a description of the model in the JAGS dialect of the BUGS language.
-- `data`: a list or environment containing the data. Any numeric objects in data corresponding to node arrays used in file are taken to represent the values of observed nodes in the model.
+- `file`: the name of the file containing a description of the model in the JAGS language.
+- `data`: a list or environment containing the data. Only the values of stochastic nodes may be included in the list. If a stochastic variable is defined in the data then its value will be treated as fixed by JAGS. Otherwise, JAGS will sample from the distribution of the variable.  
 
 ### `coda.samples`()
 
@@ -153,12 +188,11 @@ The function `coda.samples()` runs the model to generate samples from the condit
 
 - `model`: a JAGS model object created with the function `jags.model()`.
 - `variable.names`: a character vector naming the variables whose values you want returned. 
-- `n.iter`: the number of samples to generate (i.e., the number of iterations)
+- `n.iter`: the number of samples to generate (also referred to as the number of iterations)
 
 ### Example 1 (continued): Two-Sample Problem
 
-The following code will compile the model for the two-sample problem and then generate 100 samples from the 25 unobserved variables. Note that you only need to load the `rjags` package once in each `R` session. If you have not installed the package then `Rstudio` should prompt you to do so. You will also have to set the working directory for `R` to the location where *this file* is stored to run the example. The easiest way to do this is to open the file in `Rstudio` and then select `Session > Set Working Directory > Choose Directory...` from the menus and then navigate to the correct directory.
-
+The file `Examples\Example_1\example_1.jags` contains the JAGS the code for the two sample problem. Download the file and save it to your current working directory. You can then run following code to compile the model for the two-sample problem and then generate 100 samples for each of the 25 unobserved variables. Note that you only need to load the `rjags` package once in each `R` session.
 ```{r, echo = TRUE, eval = FALSE}
 # Load rjags
 library(rjags)
@@ -169,7 +203,7 @@ jags_model_1 <- jags.model("Examples/Example_1/example_1.jags")
 # Generate samples
 jags_samples_1 <- coda.samples(jags_model_1, c("y1","y2"), n.iter = 100)
 ```
-Run this code in `R`. If the model runs properly then you should see the following output. 
+If the model runs properly then you should see the following output. 
 ```{r, echo = TRUE, eval = FALSE}
 Compiling model graph
    Resolving undeclared variables
@@ -186,7 +220,7 @@ Initializing model
 
 ### coda
 
-The `coda` package contains functions to summarize the samples generated by JAGS. Here will use the `summary()` function to generate sample statistics for each of the monitored variables. The output from the this function contains 3 pieces. The first provides basic information the running of the sampler, including the number of samples that were generated. The second lists the mean and standard deviation for each variables, along with two further statistics which we will discuss later. The third provides estimates of the quantiles for each variable. The column values in the column labelled `X%` represent the `X`-th percentile of the distribution for that variable -- the value which is greater than exactly `X`% percent of the samples. The 50-th percentile is the median of the distribution.
+The `coda` package contains functions to summarize the samples generated by JAGS. Here will use the `summary()` function to generate sample statistics for each of the monitored variables. The output from the this function contains 3 pieces. The first provides basic information the running of the sampler, including the number of samples that were generated. The second lists the mean and standard deviation for each variables, along with two further statistics relating to the sampler which are discussed in Chapter 5. The third provides estimates of the percentiles for each variable. The values in the column labelled `X%` represent the `X`-th percentile of the distribution for that variable -- the value which is greater than exactly `X`% percent of the samples. The 50-th percentile is the median of the distribution.
 
 ### Example 1 (continued): Two-Sample Problem
 ```{r, echo = FALSE, eval = TRUE}
@@ -203,9 +237,9 @@ library(coda)
 ## Compute summaries
 summary(jags_samples_1)
 ```
-For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard devitation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close to the values, but not exactly equal. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
+For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard deviation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close, but not exactly equal, to the true values. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
 
-We can also look at the summary information graphically using the functions in the `ggmcmc` package. Install the package, and run the following code to create a caterpillar plot visualizing the summary statistics for each sampled value:
+We can also look at the summary information graphically using the functions in the `ggmcmc` package. The following code to create what is called a caterpillar plot visualizing the summary statistics for each sampled value:
 ```{r}
 ## Load package
 library(ggmcmc)
@@ -216,16 +250,16 @@ ggs_1 <- ggs(jags_samples_1)
 ## Create caterpillar plot
 ggs_caterpillar(ggs_1, sort = FALSE)
 ```
-For each of the sampled values, labelled on the left side, the point represents the posterior mean, the thick bar represents the extents of the 50% interval formed by the 25 and 75%-iles, and the thin bar represents the extents of the 95% interval formed by the 2.5 and 97.5%-iles. This plot very clearly shows the difference between the two groups. All of the sampled means for the first group are near 5 and all of the sampled means for the second group are near 10.
+A caterpillar plot is very like a boxplot. It summarizes the distribution of a quantity by plotting the values of certain summary statistics. For each of the sampled values, labelled on the left side, the point represents the posterior mean, the thick bar represents the extents of the 50% interval formed by the 25 and 75%-iles, and the thin bar represents the extents of the 95% interval formed by the 2.5 and 97.5%-iles. This plot very clearly shows the difference between the two groups. All of the sampled means for the first group are near 5 and all of the sampled means for the second group are near 10.
 
 ### Passing Data to JAGS
 
-In most cases, you will want to pass data from `R` into JAGS. For example, the values of `mu1`, `mu2`, and `sigmasq` are coded into the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
+In most cases, you will want to pass data from `R` into JAGS. Note that the values of `mu1`, `mu2`, and `sigmasq` are specified directly in the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
 
 An easier way to do this is to pass the values of these parameters from `R` into JAGS instead of assigning values to these parameters within the JAGS model file. This is done using the `data` argument of the `jags.model()` function. The value supplied to this argument must be a named list. JAGS will then read these values before it runs the sampler.
 
 ### Example 1 (continued): Two-Sample Problem
-The file `Examples/Example_1/example_1b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. 
+The file `Examples/Example_1/example_1b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. Instead, you will pass the values of these parameters from `R` into JAGS.
 
 The following code reruns the model from `R`. However, it includes code to construct the list `jags_data_1b` which defines the values of the parameters and then passes this to the function `jags.model()`.  
 ```{r, echo = TRUE, eval = FALSE}

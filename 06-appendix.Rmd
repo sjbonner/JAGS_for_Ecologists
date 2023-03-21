@@ -7,7 +7,7 @@ The DAG for the simple linear regression model might be drawn as:
 
 ![DAG for Simple Linear Regression](Figures/dag_2.png){width=300px}
 
-### Exercise 2: Dominant and Recessive Traits
+### Exercise 2: Dominant and Recessive Traits{#solution2}
 
 1) There are 75 individuals in the population with at least 1 recessive allele (50 with genotype Bb and 25 with genotype bb). Hence, the probability that a randomly selected individual has 1 recessive allele is $75/100=.75$.
 
