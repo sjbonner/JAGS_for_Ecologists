@@ -26,7 +26,7 @@ library(coda)
 
 ## Welcome!
 
-Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent book on Bayesian statistics, and my goal is not to try to reproduce all of the content they contain. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. 
+Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent books on Bayesian statistics, and there is no way that we could cover all of the material in any one in the two hour workshop. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. 
 
 I have designed the workshop to allow you to work at you own pace. The material is divided into 5 different sections. 
 
@@ -40,7 +40,7 @@ I have designed the workshop to allow you to work at you own pace. The material 
 
 - Section 5: Markov chain Monte Carlo
 
-My hope is that you are able to work through Sections 1-4 in the next two hours. Section 5 is a bit more technical and discusses more of what JAGS is doing behind the scenes. However, this is important information if you are going to use JAGS or any of the other MCMC sampling software packages in practice. This is the difference between being able to ask Google Maps for directions and knowing when the directions are correct ([or incorrect](https://www.9news.com.au/world/google-maps-error-leads-demolition-crew-to-the-wrong-house/4b0ea550-88b7-4ca9-982f-5746c2d03027)). 
+My hope is that you are able to work through Sections 1-4. Section 5 is a bit more technical and discusses more of what JAGS is doing behind the scenes. However, this is important information if you are going to use JAGS or any of the other MCMC sampling software packages in practice. This is the difference between being able to ask Google Maps for directions and knowing when the directions are correct ([or incorrect](https://www.9news.com.au/world/google-maps-error-leads-demolition-crew-to-the-wrong-house/4b0ea550-88b7-4ca9-982f-5746c2d03027)). 
 
 Please don't hesitate to ask any questions.
 
@@ -53,8 +53,8 @@ Simon
 I expect that most of you will use RStudio to access R, though you are welcome to use any other development environment. If you have not installed R or RStudio then you will need to download the installers. If you have installed R or RStudio in the past then I recommend that you make sure that you are running the most recent versions. 
 
 - R
-    You can check your version of R by starting RStudio and looking at the top line of output in the console. The most recent version of R is 4.2.3 (version 4.2.2 will also be fine). If you need to install or upgrade then you can download the intallers from [CRAN](https://cran.r-project.org/). 
-    
+    You can check your version of R by starting RStudio and looking at the top line of output in the console. The most recent version of R is 4.2.3 (version 4.2.2 will also be fine). If you need to install or upgrade then you can download the installers from [CRAN](https://cran.r-project.org/). 
+     
 -RStudio
     You can check for updates of RStudio by selection `Help > Check for Updates` from the menu. The most recent version of RStudio is 2022.12.0 Build 353. You can also download the installer for the most recent version of RStudio from [posit](https://posit.co/downloads/) (the new name of the RStudio company).
     
