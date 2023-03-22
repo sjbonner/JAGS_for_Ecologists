@@ -109,8 +109,8 @@ summary(jags_samples_4)
 ```
 Run the code and compare the mean and 95% credible interval from the sample with the theoretical mean and 95% credible interval given above. You should find that the results are close but not exact. 
 
-### Exercise 3
+<!-- ### Exercise 3 -->
 
-1) Try running the code again and increase the number of sample drawn from the posterior distribution from 1000 to 5000 or 10000. You should find that the results become closer and closer to the theoretical value as the number of samples generated increases.  
+<!-- 1) Try running the code again and increase the number of sample drawn from the posterior distribution from 1000 to 5000 or 10000. You should find that the results become closer and closer to the theoretical value as the number of samples generated increases.   -->
 
-2) Change the values of `n` and `k` and confirm that you can reproduce the values in the table above (with some uncertainty).
+<!-- 2) Change the values of `n` and `k` and confirm that you can reproduce the values in the table above (with some uncertainty). -->
