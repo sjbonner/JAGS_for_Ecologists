@@ -1,14 +1,14 @@
-# Appendices
+<!-- # Appendices -->
 
-## Exercise Solutions
+<!-- ## Exercise Solutions -->
 
-### Exercise 1: Linear Regression{#solution1}
-The DAG for the simple linear regression model might be drawn as:
+<!-- ### Exercise 1: Linear Regression{#solution1} -->
+<!-- The DAG for the simple linear regression model might be drawn as: -->
 
-![DAG for Simple Linear Regression](Figures/dag_2.png){width=300px}
+<!-- ![DAG for Simple Linear Regression](Figures/dag_2.png){width=300px} -->
 
-### Exercise 2: Dominant and Recessive Traits{#solution2}
+<!-- ### Exercise 2: Dominant and Recessive Traits{#solution2} -->
 
-1) There are 75 individuals in the population with at least 1 recessive allele (50 with genotype Bb and 25 with genotype bb). Hence, the probability that a randomly selected individual has 1 recessive allele is $75/100=.75$.
+<!-- 1) There are 75 individuals in the population with at least 1 recessive allele (50 with genotype Bb and 25 with genotype bb). Hence, the probability that a randomly selected individual has 1 recessive allele is $75/100=.75$. -->
 
-2) There are 75 individuals with brown eyes in the population (25 with genotype BB and 50 with genotype Bb). Of these, 50 have 1 recessive allele. The probability that a randomly selected individual has 1 recessive allele given that they have brown eyes is $50/75=.67$. 
+<!-- 2) There are 75 individuals with brown eyes in the population (25 with genotype BB and 50 with genotype Bb). Of these, 50 have 1 recessive allele. The probability that a randomly selected individual has 1 recessive allele given that they have brown eyes is $50/75=.67$.  -->
