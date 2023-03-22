@@ -76,7 +76,7 @@ The [solution](#solution1) is given in the final chapter.
 <!-- When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children.  -->
 
 <!-- ### Example 2: Craps -->
-<!-- As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 (two 1s) and the largest is 12 (two 6s). The probabilitoes of the different outcomes are given in the following table: -->
+<!-- As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 (two 1s) and the largest is 12 (two 6s). The probabilities of the different outcomes are given in the following table: -->
 <!-- ```{r} -->
 <!-- ## Craps probabilities -->
 <!-- craps <- tibble(Outcome = as.character(2:12), -->
