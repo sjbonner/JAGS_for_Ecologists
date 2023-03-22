@@ -71,37 +71,37 @@ Construct the DAG for a simple linear regression model with $50$ observations.
 
 The [solution](#solution1) is given in the final chapter. 
 
-## Conditional Distributions
+<!-- ## Conditional Distributions -->
 
-When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children. 
+<!-- When you run JAGS you will usually supply values for some of the nodes in the graph. JAGS will then sample values for the remaining nodes in the graph. Specifically, JAGS samples from the conditional distributions of each of these nodes given the values you supplied for the remaining nodes. That is, it samples from the distribution of each unobserved node given the current values of both its parents and its children.  -->
 
-### Example 2: Craps
-As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 (two 1s) and the largest is 12 (two 6s). The probabilitoes of the different outcomes are given in the following table:
-```{r}
-## Craps probabilities
-craps <- tibble(Outcome = as.character(2:12),
-                Probability = round(c(1,2,3,4,5,6,5,4,3,2,1)/36,3))
+<!-- ### Example 2: Craps -->
+<!-- As an example of conditional distributions, suppose that we want to know the probability of rolling a 5 in craps -- a simple dice game in which players roll a pair of six sided die and bet on sum of the two values. The smallest possible outcome (the sum of the values on the two die) is 2 (two 1s) and the largest is 12 (two 6s). The probabilitoes of the different outcomes are given in the following table: -->
+<!-- ```{r} -->
+<!-- ## Craps probabilities -->
+<!-- craps <- tibble(Outcome = as.character(2:12), -->
+<!--                 Probability = round(c(1,2,3,4,5,6,5,4,3,2,1)/36,3)) -->
 
-t(craps) %>%
-  kable(digits = 3)
-```
-This means that if you roll the pair of die many, many times then the proportion of times the sum equals two will be very close to .028, the proportion of times the sum equals three will be very close to .056, etc. 
+<!-- t(craps) %>% -->
+<!--   kable(digits = 3) -->
+<!-- ``` -->
+<!-- This means that if you roll the pair of die many, many times then the proportion of times the sum equals two will be very close to .028, the proportion of times the sum equals three will be very close to .056, etc.  -->
 
-Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. If you were to fix the value of the first die to be 3 and roll the second die many, many times then the proportion of times that the sum is 5 would be very close to .167. 
+<!-- Now suppose that you know that the value on the first die is 3. There is only one value for the second die that will produce the outcome 5, it's 2, and so the probability of rolling a 5 given that the value on the first die is 3 is 1/6=.167. We say that the conditional probability of the outcome 5 *given that the value on the first die is 3* is .167. If you were to fix the value of the first die to be 3 and roll the second die many, many times then the proportion of times that the sum is 5 would be very close to .167.  -->
 
-In this case, it is very simple to compute the conditional probabilities of different sums given the value of one die or other constraints (e.g., that the number on the first die is even). However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.  
+<!-- In this case, it is very simple to compute the conditional probabilities of different sums given the value of one die or other constraints (e.g., that the number on the first die is even). However, if the distribution is complex then it can be very difficult to derive the conditional distributions mathematically. JAGS solves this problem by simulating from the conditional distributions numerically rather than trying to derive mathematical formulas.   -->
 
-### Exercise 2: Dominant and Recessive Traits
+<!-- ### Exercise 2: Dominant and Recessive Traits -->
 
-The classic genetics problem assumes that there is a single gene for eye colour with two alleles: a dominant allele B that produces brown eyes and a recessive allele b that produces blue eyes. An individual has brown eyes if they have genotype BB or Bb and blue eyes if they have genotype bb. 
+<!-- The classic genetics problem assumes that there is a single gene for eye colour with two alleles: a dominant allele B that produces brown eyes and a recessive allele b that produces blue eyes. An individual has brown eyes if they have genotype BB or Bb and blue eyes if they have genotype bb.  -->
 
-Suppose that a population of 100 individuals contains 25 individuals with genotype BB, 50 individuals with genotype Bb, and 25 individual with genotype bb. 
+<!-- Suppose that a population of 100 individuals contains 25 individuals with genotype BB, 50 individuals with genotype Bb, and 25 individual with genotype bb.  -->
 
-1) What is the probability that a randomly selected individual has at least one copy of the recessive allele?
+<!-- 1) What is the probability that a randomly selected individual has at least one copy of the recessive allele? -->
 
-2) What is the probability that a randomly selected individual has at least one copy of the recessive allele give that they have brown eyes?
+<!-- 2) What is the probability that a randomly selected individual has at least one copy of the recessive allele give that they have brown eyes? -->
 
-The [solution](#solution2) is given in the final chapter. 
+<!-- The [solution](#solution2) is given in the final chapter.  -->
 
 ## Basic JAGS syntax
 
