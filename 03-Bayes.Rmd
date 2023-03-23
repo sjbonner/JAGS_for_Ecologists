@@ -1,7 +1,15 @@
 # Bayesian Statistics
 
+```{r, echo = FALSE, eval=TRUE, message=FALSE,warning=FALSE}
+library(tidyverse)
+library(knitr)
+library(ggmcmc)
+```
+
 ## Introduction
-In the previous section, we used JAGS to generate data from a model given set values for the parameters. Statistical inference turns this problem around: we aim to learn about the values of the parameters based on a given set of data. We do this in Bayesian inference by constructing distributions that model our uncertainty in the values of the parameters conditional on the data. If the models are simple enough then we can describe these distributions mathematically. However, this is rarely possible in practice. Instead, we can use JAGS, or similar software, to simulate from the distributions of the parameters conditional on the observed data and then use the simulated values to summarize the shapes of the distributions. 
+In the previous section, we used JAGS to generate data from a model given set values for the parameters. For example, we simulated the coin tossing experiment by generating values from the binomial distribution given the number of tosses, $n$, and the probability of heads, $p$. We could then learn about the distribution of the data given the values of the parameters.
+
+Statistical inference (frequentist or Bayesian) turns this problem around: we aim to learn about the values of the parameters based on a given set of data. We do this in Bayesian inference by constructing distributions that model our uncertainty about the values of the parameters conditional on the data. If the models are simple enough then we can describe these distributions mathematically. However, this is rarely possible in practice. Instead, we can use JAGS, or similar software, to simulate from the distributions of the parameters conditional on the observed data and then use the simulated values to summarize the shapes of the distributions. 
 
 ## Prior and Posterior Distributions
 
@@ -9,15 +17,17 @@ There is one final ingredient that needs to be defined before we can conduct inf
 
 There are different ways of constructing prior distributions that have different effects on the posterior. Some of the debate can be rather philosophical, and we will avoid this during this workshop. Instead, we will look at common prior distributions and the effects they have on inference.
 
-### Example 3: Coin Tossing
+### Example 3: Coin Tossing 2
 
-Suppose that your friend has two coins, one of which is fair (i.e., it has a heads side and a tails side and lands heads side up 50% of the time) and one of which has heads on both sides (so it always lands heads side up). You close your eyes, pick one of the coins at random, hand it to your friend, and she tosses it. Your job is to decide whether you chose the fair code or the coin with two heads based on whether it landed heads or tails side up.
+Suppose that your friend has two coins, one of which is fair (i.e., it has a heads side and a tails side and lands heads side up 50% of the time) and one of which has heads on both sides (so it always lands heads side up). She chooses one coin at random and then tosses it. Your job is to decide whether you chose the fair code or the coin with two heads based on whether it landed heads or tails side up.
 
-If the coin lands tails side up then it must be the fair coin. If the coin lands heads side up then it might either be the fair coin or the coin with two heads. It seems more likely that it would be the coin with two heads in this case -- since it has two heads and the fair coin only has one. In fact, you might guess that it is twice as likely to be the coin with two heads. 
+If the coin lands tails side up then it must be the fair coin. If the coin lands heads side up then it might either be the fair coin or the coin with two heads. It seems more likely that it would be the coin with two heads in this case -- since it has twice as many heads. In fact, you might guess that it is twice as likely to be the coin with two heads, and you would be right -- as long as your friend isn't cheating!
 
 How can we describe this mathematically?
 
-If you pick the coin at random then there is a 50% chance that you choose either coin. This is the prior distribution. A priori, the probability that you chose the fair coin is .5 and the probability that you chose the coin with two heads is .5.  
+If your friend picks the coin at random then there is a 50% chance that she chooses either coin. This is the prior distribution. The probability that your friend chose the fair coin is .5 and the probability that your friend chose the coin with two heads is .5. Another way of saying this is that before tossing the coin, you believe that it is equally like she picked either one.
+
+Now the coin is tossed.
 
 If the coin lands tails side up then it must be the fair coin. In this case, the posterior distribution puts probability 1 on the fair coin and probability 0 on the coin with two heads (i.e., it must be the fair coin). 
 
@@ -25,29 +35,33 @@ If the coin lands heads side up then the posterior distribution assigns probabil
 
 What happens if your friend tosses the same coin a second time and it lands heads side up again? In this case, the posterior probability that it is the fair coin is 1/5 and the probability that it is the coin with two heads is 4/5. More generally, if your friend tosses the coin $n$ times and it lands heads side up every time then the posterior distribution assigns probability $1/2^k$ that you chose the fair coin and probability $1-1/2^k$ that you chose the coin with two heads. 
 
+Suppose, on the other hand, that your don't trust your friend. Perhaps you think that she is more likely to choose the coin with two heads to keep you playing the game longer. In this case, you might assign prior probabilities of 3/4 that she picks the coin with two heads and 1/4 that she picks the fair coin. 
+
+The posterior distribution will again assign probability 1 to the fair coin if it lands tails side up -- that's still a certainty. However, if the coin lands heads sides up then the posterior distribution assigns a probability of 6/7 to the coin with two heads and only 1/7 to the fair coin. Your prior belief (that she picks the coin with two heads more often) and the observed data (that the coin landed heads side up) combine to give you a stronger belief that she did indeed pick the coin with two heads. 
+
 ## Interpreting Posterior Distributions
 
-In Bayesian inference, information about the parameters is contained in the posterior distribution. Consider the coin tossing problem. Initially, the prior distribution assigns equal probability to the fair coin and the coin with two heads. After the coin lands heads side up once, the posterior distribution assigns probability of $2/3$ to the coin with two heads. There is still a 1/3 chance that it is the fair coin, but it is more likely to be the coin with two heads. After the coin lands heads side up twice, the probability assigned to the coin with two heads increases to 4/5. As the coin is tossed more and more and lands heads side up more and more often you become more and more certain that you chose the coin with two heads. There is always a possibility that you picked the fair coin and it happened to land heads side up every time by chance, but this becomes less and less likely the more the coin is tossed. If the coin lands heads side up 10 times in a row then the posterior distribution assigns probability $1-1/2^10=.9990234$ to the coin with two heads. This is so unlikely to happen if the coin is fair, that the posterior distribution assigns a probability on only $.000976$ to the fair coin (less than 1 in 10,000). 
+In Bayesian inference, information about the parameters is contained in the posterior distribution. Consider the coin tossing problem and assume your friend is honest. Initially, the prior distribution assigns equal probability to the fair coin and the coin with two heads. After the coin lands heads side up once, the posterior distribution assigns probability of $2/3$ to the coin with two heads. There is still a 1/3 chance that it is the fair coin, but it is more likely to be the coin with two heads. After the coin lands heads side up twice, the probability assigned to the coin with two heads increases to 4/5. As the coin is tossed more and more and lands heads side up more and more often you become more and more certain that you chose the coin with two heads. There is always a possibility that you picked the fair coin and it happened to land heads side up every time by chance, but this becomes less and less likely the more the coin is tossed. If the coin lands heads side up 10 times in a row then the posterior distribution assigns probability $1-1/2^10=.9990234$ to the coin with two heads. This is so unlikely to happen if the coin is fair, that the posterior distribution assigns a probability on only $.000976$ to the fair coin (less than 1 in 10,000). 
 
-In most cases, the distributions we assign to parameters will be continuous not discrete. For example, prior distributions are often selected to be normal distributions. In these cases, we summarize information about the parameters using the basic statistics for describing the shape of a distribution that you have likelihood encountered in introductory statistics classes. These include the mean, median, and mode to identify the centre (location) of the distribution and the standard deviation to measure the spread of the distribution. 
+The distributions we assign to parameters may be continuous or discrete depending on the distribution. If the distribution is continuous then we summarize information about the parameters using the basic statistics for describing the shape of a distribution that you have likelihood encountered in introductory statistics classes. These include the mean, median, and mode to identify the centre (location) of the distribution and the standard deviation to measure the spread of the distribution. 
 
 A more informative summary of a distribution that measures both its location and its spread is an interval that contains a certain amount of the distribution's probability. An interval that contains $X$% of the probability under the posterior distribution for a parameter is called an $X$% credible interval. For example, the interval between the 2.5 percentile and 97.5 percentile contains 95% of the probability and hence forms a 95% credible interval. Credible intervals are the Bayesian analogue of confidence intervals in classical statistics.
 
-These are the statistics that are provided in the output from the `summary()` function and in the caterpillar plot. 
+These are the statistics that are provided in the output from the `summary()` function from the `coda` package and in the caterpillar plot. 
 
-In practice, it is common to provided one of the measures of location of the posterior distribution (most of the mean) as a point estimate (the best guess at the value of a parameter) and either the standard deviation or a credible interval as a measure of the spread. Bigger values of the standard deviation or wider credible intervals indicate that there is more uncertainty about the value of the parameter (the posterior distribution is more spread out). Smaller values of the standard deviation or narrower credible intervals indicate that there is less uncertainty about the value of the parameter (the posterior distribution is less spread out). 
+In practice, it is common to provide one of the measures of location of the posterior distribution (most often the mean) as a point estimate (the best guess at the value of a parameter) and either the standard deviation or a credible interval as a measure of the spread. Bigger values of the standard deviation or wider credible intervals indicate that there is more uncertainty about the value of the parameter (the posterior distribution is more spread out). Smaller values of the standard deviation or narrower credible intervals indicate that there is less uncertainty about the value of the parameter (the posterior distribution is less spread out). 
 
-### Example 4: Coin Tossing 2 (The Gory Math!)
+### Example 1 (continued): Coin Tossing (The Gory Math!)
 
-Consider the coin tossing problem again, but suppose this time that your friend only has one coin which has both a heads and a tails side. However, it is not fair and lands heads side up with some probability between 0 and 1, which I'll call $p$, and tails side up with probability $1-p$. E.g., if $p=.1$ then it lands heads side up on 1 out of every 10 tosses, on average, and if $p=.9$ then it lands heads side up on 9 out of every 10 tosses, on average. Your job this time is guess the value of $p$. 
+Let's return to the simple problem with only 1 coin. In the previous section, we assumed that the coin was fair and simulated tosses. Now, we will let the probabililities of heads, $p$, be unknown and use the observed data to make inference about $p$. In fact, no coin is exactly fair because of the slight differences in weight cause by the patterns on each side. 
 
-If you know nothing about $p$ to begin with then you might choose a prior distribution that assigns the same probability to every value between 0 and 1. This is the uniform distribution. Suppose that your friend tosses the coin $n$ times and it lands heads side up $k$ times. In this case, it's possible to compute the posterior distribution exactly. The plots below compare the posterior distribution for two different values of $n$, 5 and 10, and two different values of $k/n$, the proportion of heads. These are .2 (meaning that $k$ is equal to 1 if $n=5$ and 2 if $n=10$) and .8 (meaning that $k$ is equal to 4 if $n=5$ and $8$ if $k=10$). 
+If you know nothing about $p$ to begin with then you might choose a prior distribution that assigns the same probability to every possible value of $p$, which are all the values between 0 and 1. This is the uniform distribution. Suppose that you toss the coin $n$ times and it lands heads side up $y$ times. In this case, it's possible to compute the posterior distribution exactly. The plots below compare the posterior distribution for two different values of $n$, 5 and 10, and two different values of $y/n$, the proportion of heads, .2 (meaning that $y$ is equal to 1 if $n=5$ and 2 if $n=10$) and .8 (meaning that $y$ is equal to 4 if $n=5$ and $8$ if $y=10$). 
 ```{r, echo = FALSE, eval = TRUE}
 mydata <- crossing(n = c(5,10),
                    r = c(.2,.8),
                    p = (1:100)/101) %>%
-  mutate(k = r * n,
-         d = dbeta(p, k + 1, n - k + 1))
+  mutate(y = r * n,
+         d = dbeta(p, y + 1, n - y + 1))
 
 mydata %>%
   ggplot(aes(x = p, y = d)) + 
@@ -58,45 +72,41 @@ mydata %>%
   
 ```
 
-In each case, the posterior distribution is highest around the value $k/n$, .2 on the left or .8 on the right, which is shown by the dotted line. This indicates that $k/n$ is the best guess at the probability of tossing a head given the observed data. However, the posterior distributions are more spread out in the top plots and more concentrated about the values in the bottom plots. This implies that we are more confident about the values in bottom when we have collected more data. 
+In each case, the posterior distribution is highest around the value $y/n$, .2 on the left or .8 on the right, which is shown by the dotted line. This indicates that $y/n$ is the best guess at the probability of tossing a head given the observed data. However, the posterior distributions are more spread out in the top plots and more concentrated about the values in the bottom plots. This implies that we are more confident about the value $p$ in bottom when we have collected more data. 
 
-This is also evident in the following table which provides the posterior means and the lower and upper bounds of the 95% credible intervals for $p$ for each combination of $n$ and $k$. The posterior mean only depends on the ratio $k/n$, but the confidence interval becomes narrower as $n$ increases. 
+This is also evident in the following table which provides the posterior means and the lower and upper bounds of the 95% credible intervals for $p$ for each combination of $n$ and $y$. The posterior mean only depends on the ratio $y/n$, but the confidence interval becomes narrower as $n$ increases. 
 ```{r}
 mytab <- crossing(n = c(5,20),
                   r = c(.2,.8)) %>%
-  mutate(k = n * r,
+  mutate(y = n * r,
          Mean = r,
-         Lower = qbeta(.025,k + 1, n - k + 1),
-         Upper = qbeta(.975, k+1, n - k + 1))
+         Lower = qbeta(.025,y + 1, n - y + 1),
+         Upper = qbeta(.975, y+1, n - y + 1))
 
 mytab %>%
   select(-r) %>%
   kable(digits = 2)
 ```
-For example, the posterior mean is equal to $.2$ both when $k=1$ and $n=5$ and when $k=4$ and $n=20$. However, the width of the 95% credible is .64-.04=.60 in the first case and .42-.08=.34 in the second. The secodn interval is just over half as wide, indicating that we are much more confident about the value of $p$. 
+For example, the posterior mean is equal to $.2$ both when $y=1$ and $n=5$ and when $y=4$ and $n=20$. However, the width of the 95% credible is .64-.04=.60 in the first case and .42-.08=.34 in the second. The secodn interval is just over half as wide, indicating that we are much more confident about the value of $p$. 
 
-### Example 4 (continued): Coin Tossing 2 (Simulation with JAGS)
+### Example 1 (continued): Coin Tossing (Simulation with JAGS)
 
-The number of heads in our coin toss example follows a binomial distribution with parameters $n$ and $p$. This is a very simple model, and the DAG looks like this
-
-![DAG coin tossing model](Figures/coin_toss_dag.png){width=150px}
-
-This binomial distribution is implemented with the function `dbinom(p,n)` in JAGS (yes, the `n` and the `p` are backwards). The uniform distribution over the interval from 0 to 1 is implemented with the function `dunif()`. Putting these together, we can implement the model for the coin tossin problem with the code
+The uniform distribution over the interval from 0 to 1 is implemented in JAGS with the function `dunif()`. Adding this to the coin tossing example, the code would look like this
 ```{r, eval = FALSE, echo = TRUE}
 model{
   ## Distribution of observed data
-  k ~ dbinom(p,n)
+  y ~ dbinom(p,n)
   
   ## Prior distribution
   p ~ dunif(0,1)
 }
 ```
-This code is also provided in the file `Examples/Example_4/example_4.jags`. 
+Noe that `p` is now defined as a stochastic node and is assigned a distribution, rather than being a deterministic node and being treated as fixed. This code is also provided in the file `Examples/Example_1/example_1b.jags`. 
 
-The following `R` code would compile this model and then generate 1000 samples from the distribution of `p` for the case in which the coin is tossed 10 times and lands heads side up 4 times. 
+The following `R` code will compile this model and then generate 1000 samples from the distribution of `p` for the case in which the coin is tossed 10 times and lands heads side up 4 times. 
 ```{r, eval = FALSE, echo = TRUE}
 ## Define data
-jags_data_4 <- list(n = 10, k = 4)
+jags_data_4 <- list(n = 10, y = 4)
 
 ## Compile model
 jags_model_4 <- jags.model("Examples/Example_4/example_4.jags", jags_data_4)
@@ -107,7 +117,87 @@ jags_samples_4 <- coda.samples(jags_model_4, "p", n.iter = 1000)
 ## Compute summary statistics
 summary(jags_samples_4)
 ```
-Run the code and compare the mean and 95% credible interval from the sample with the theoretical mean and 95% credible interval given above. You should find that the results are close but not exact. 
+Run the code and compare the mean and 95% credible interval from the sample with the theoretical mean and 95% credible interval given above. You should find that the results are close but not exact. Repeat this with the other values of $n$ and $y$
+
+### Example 2 (continued): Two-Sample Problem
+
+Now we'll look at our first real data example. In the previous section, we used JAGS to simulate data for the two sample problem given values of the parameters $\mu_1$, $\mu_2$, and $\sigma^2$. Instead, we'll use the model to make inference about the parameters given observed data. 
+
+The data we will consider is known alternatively as either Fisher's or Anderson's iris data. It was collected by Edgar Anderson in the Gaspe Peninsula circa 1935 but first analysed by Ronald Fisher in 1936. The data is provided with `R` and you can view it simply by typing `iris` into `R`. The variables in the data record the length and width of the sepals and petals and the species (\textit{Iris setosa}, \textit{Iris versicolor}, and \textit{Iris virginica}). We will use the $t$-test to compare the sepal length for the first two species.
+
+Once again, we need to modify the code to include prior distributions for the 3 parameters. I have chosen to assign normal prior distributions to $\mu_1$ and $\mu_2$ and gamma prior distribution to the precision $\tau^2 = 1/\sigma^2$. There are reasons for choosing these distributions (they are called the conjugate priors), but that this is beyond the scope of this workshop. I'm happy to answer questions. The new code is provided in `Examples/Example_2/example_2c.jags` and looks like this:
+```{r echo = TRUE, eval = FALSE}
+model{
+  # Distributions
+  for(j in 1:n1){
+    y1[j] ~ dnorm(mu1,1/sigmasq)
+  }
+  
+  for(j in 1:n2){
+    y2[j] ~ dnorm(mu2,1/sigmasq)
+  }
+  
+  # Prior distributions
+  mu1 ~ dnorm(0,.01)
+  mu2 ~ dnorm(0,.01)
+  
+  tausq ~ dgamma(.01,.01)
+  
+  # Derived parameters
+  sigmasq <- 1/tausq
+}
+```
+Note that I have changed the bounds on the for loop to allow for the new data and also added a section called `# Derived parameters` with a line to compute the variance from the precision since I am more comfortable working with variances. Run the model with the following code:
+```{r, echo = TRUE, eval = FALSE}
+# Construct data list
+y1 <- iris[iris$Species == "setosa", "Sepal.Length"]
+n1 <- length(y1)
+
+y2 <- iris[iris$Species == "versicolor", "Sepal.Length"]
+n2 <- length(y2)
+
+jags_data_2c <- list(y1 = y1, n1 = n1, y2 = y2, n2 = n2)
+
+# Initialize model
+jags_model_2c <- jags.model("Examples/Example_2/example_2c.jags", jags_data_2c)
+
+# Generate samples
+jags_samples_2c <- coda.samples(jags_model_2c, c("mu1","mu2","sigmasq"), n.iter = 1000)
+```
+You can then compute the statistics of the posterior distribution and plot caterpillar plots of the means as follows:
+```{r eval = FALSE, echo=TRUE}
+## Compute summary statistics
+summary(jags_samples_2c)
+
+## Create caterpillar plot
+ggs_2c <- ggs(jags_samples_2c)
+ggs_caterpillar(ggs_2c,"mu")
+```
+Your results will look something like this:
+```{r echo = TRUE, eval = FALSE}
+Iterations = 1001:2000
+Thinning interval = 1 
+Number of chains = 1 
+Sample size per chain = 1000 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+          Mean     SD Naive SE Time-series SE
+mu1     4.8592 0.1801 0.005696       0.005696
+mu2     5.9673 0.1506 0.004764       0.004433
+sigmasq 0.3272 0.1094 0.003460       0.005056
+
+2. Quantiles for each variable:
+
+          2.5%    25%   50%    75%  97.5%
+mu1     4.5048 4.7372 4.860 4.9784 5.2168
+mu2     5.6648 5.8734 5.969 6.0661 6.2629
+sigmasq 0.1777 0.2513 0.307 0.3757 0.5938
+
+```
+Note that the posterior mean of $\mu_1$, 4.86, is considerably bigger than the posterior mean of $\mu_1$, 5.97, and that the 95% credible intervals, (4.50,5.22) and (5.66,6.26) respectively, don't overlap. This provides strong evidence that the mean sepal length differs for these two species. On average,  \textit{Iris versicolor} has longer sepals than \textit{Iris setosa}. 
+
 
 <!-- ### Exercise 3 -->
 
