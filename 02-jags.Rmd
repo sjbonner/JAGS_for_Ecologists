@@ -1,5 +1,11 @@
 # Introducing JAGS
 
+<center>
+
+![The wrong JAGS](Figures/not_jags.png){width=300px}
+
+</center>
+
 ## Introduction
 
 We will begin by looking at JAGS and then see how the software can be used in the framework of Bayesian statistics in the next chapter. The core idea behind JAGS is that we can learn about a distribution by repeatedly sampling. 
@@ -33,7 +39,7 @@ JAGS is doing exactly this, but it is able to simulate from much more complicate
 
 Much of the syntax for JAGS will look familiar if you have programmed in R before. However, the objective is fundamentally different. R is a functional programming language meaning that it works by providing input to functions that then return output which can be passed to new functions in turn. For example, you might load data with `read.csv()` which takes the name of a file as input and returns a data frame as output. You might then pass the data frame to `lm()` which fits a linear regression model and returns summary output. Some functions may be very complicated, but they are all essentially black-boxes that take some inputs (numbers, data frames, vectors etc), do some calculations, and return some outputs (new numbers, data frames, or vectors). 
 
-The purpose of the JAGS language is to define the structure of a statistical model. JAGS code does not define a sequence of steps in which objects are passed to funcions that return new objects. Instead, the code defines the relationships between variables in statisical model. Behind the scenes, JAGS is constructing a graph that describes how the variables are connected. The variables are referred to as nodes in the graph, and the nodes belong to one of two types: 
+The purpose of the JAGS language is to define the structure of a statistical model. JAGS code does not define a sequence of steps in which objects are passed to functions that return new objects. Instead, the code defines the relationships between variables in statistical model. Behind the scenes, JAGS is constructing a graph that describes how the variables are connected. The variables are referred to as nodes in the graph, and the nodes belong to one of two types: 
 
 1) Deterministic Nodes 
     A node is deterministic if the value of the node is unique given its inputs. For example, a node that is the sum of two values is deterministic because it will always produce the same sum from the same input. 
@@ -51,25 +57,38 @@ The final graph must also satisfy two conditions to define a valid statistical m
    
 We say that the final graph is a Directed Acyclic Graph or DAG short. The streets in a city form a DAG if all streets are one-way and no matter where you start from you can never get home. Don't by a house there!
 
-### Example 1: Two-Sample Problem
+It often helps to draw out the DAG for a model before trying to write the code in JAGS. Here are the DAGS for some simple models. There are different conventions for drawing DAGS. I will use squares to identify deterministic nodes and circles to identify the stochastic nodes, with arrows showing the directed relationships. 
 
-Consider the setup of a two-sample $t$-test. We assume that we have $10$ observations from one group and $15$ from a second group such that the observations are normally distributed with the same variance but possibly a different mean. I will let $Y_{ij}$ denote the $j$-th observation from group $i$, $\mu_i$ the mean for group $i$, and $\sigma^2$ the common variance. The DAG might be drawn like this:
+### Example 1: Coin Tossing
+
+The DAG for the coin tossing example has three nodes, $p$, $n$ and $Y$. The parameter, $p$ and $n$, are deterministic nodes and $Y$ is stochastic. The distribution of $Y$ depends on $p$ and $n$, and so the DAG would look like this:
+
+![DAG for Two-Sample $t$-test](Figures/dag_0.png){width=300px}
+
+### Example 2: Two-Sample Problem
+
+Here I will consider the setup of a two-sample $t$-test. The two-sample $t$-test assumes that we have observations on some response variable (e.g., weight of birds or length of fish) from two groups of individuals. The observations in each group are assumed to be normally distributed so that the variance is the same in the two groups, but the means are different. 
+
+I will let $n_1$ and $n_2$ denote the number observations from each group (these don't have to be equal), $\mu_1$ and $\mu2$ the means, and $\sigma^2$ the common variance. The individual observations will be denoted by $Y_{11},\ldots,Y_{1n_1}$ for the first group and $Y_{21},\ldots,Y_{2n_2}$ for the second group. 
+
+Once again, the parameters, $\mu_1$, $\mu_2$, and $\sigma$, are deterministic nodes and the observations, $Y_{11},\ldots,Y_{1n_1}$ and $Y_{21},\ldots,Y_{2n_2}$, are stochastic nodes. The DAG might be drawn like this:
 
 ![DAG for Two-Sample $t$-test](Figures/dag_1.png){width=300px}
 
-The square boxes around the parameters, $\mu_1$, $\sigma^2$, and $\mu_2$ indicate that these are deterministic nodes. The round boxes around $Y_{1j}$ and $Y_{2j}$ indicate that these are stochastic nodes. The arrows show the directions of dependency between pairs of nodes: $Y_{1j}$ depends on $\mu_1$ and $\sigma^2$ and similarly $Y_{2j}$ depends on $\mu_2$ and $\sigma^2$. Finally, the larger square boxes indicate that the structure inside is repeated, with the number of replications indicated in the bottom corner. E.g., the distribution of each $Y_{1j}$ is the same for all values of $j$ from 1 to $n$. 
+The larger square boxes in this diagram are a space saving measure. They indicate that the structure inside is repeated, with indices of the replicates indicated in the bottom corner. E.g., the each $Y_{1j}$ shares the same distribution depending on $\mu_1$ and $\sigma^2$. This avoids having to draw separate nodes for each observation. 
 
-### Example 2: Linear Regression
+### Example 3: Linear Regression
 
-A slightly more complicated example is the simple linear regression model. A simple linear regression model relates the mean of a response to the value of some predictor. Specifically, we assume that the $i$-th observation, denoted by $Y_i$, follows a normal distribution whose mean, $\mu_i$, is a linear function of the predictor, $x_i$, given by 
+As a third example, we'll consider the simple linear regression model relating the mean of a response variable to the value of some predictor. Let $(Y_1,x_1),\ldots,(Y_n,x_n)$ denote paired observations where $Y_i$ is the response variable and $x_i$ is the predictor. For example, we might predict the length of a fish based on its age. The linear regression model assumes $Y_$ is normally distributed with mean
 $$
-\mu_i = \beta_0 + \beta_1.
+\mu_i = \beta_0 + \beta_1 x_i.
 $$
 Here $\beta_0$ is the intercept and $\beta_1$ is the slope. The variance of the response is assumed to be a constant, usually denoted by $\sigma^2$. 
 
-The DAG for the simple linear regression model might be drawn as:
+In this model the parameters $\beta_0$, $\beta_1$, and $\sigma^2$ are deterministic. The predictor variable, $x_i$, is also a deterministic node since the model assumes that the value is observed without error. The only stochastic nodes are the response varibles, $Y_i$. The DAG for the simple linear regression model might be drawn as:
 
 ![DAG for Simple Linear Regression](Figures/dag_2.png){width=300px}
+Note that the node for the mean, $\mu_i$, is not strictly necessary. We could have connected all of the other nodes directly into $Y_i$. However, I find it helpful to include this node because it distinguishes the nodes that affect the mean of the response ($\beta_0$, $\beta_1$, and $x_i$) and the nodes that affect the variance (just $\sigma^$ in this case). 
 
 <!-- ## Conditional Distributions -->
 
@@ -218,6 +237,10 @@ Initializing model
   |**************************************************| 100%
 ```
 
+## Summarizing the Results
+
+Once JAGS has generated the samples, you need to process the samples to summarize the results. This involves computing summary statistics for the distribution (e.g., means, medians, variances, quantiles). You can also summarize the distribution graphically by plotting different summary statistics.  
+
 ### coda
 
 The `coda` package contains functions to summarize the samples generated by JAGS. In particular, you can use the `summary()` function to generate sample statistics for each of the monitored variables. The output from  this function contains 3 pieces. 
@@ -248,20 +271,24 @@ summary(jags_samples_1)
 ```
 For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard deviation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close, but not exactly equal, to the true values. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
 
-We can also look at the summary information graphically using the functions in the `ggmcmc` package. The following code to create what is called a caterpillar plot visualizing the summary statistics for each sampled value:
+### ggmcmc
+
+We can also look at the summary information graphically using the functions in the `ggmcmc` package. The plotting functions in the package require that the output from JAGS first be processed with the functions in `ggs()`. For example:
 ```{r}
 ## Load package
 library(ggmcmc)
 
 ## Construct ggs object
 ggs_1 <- ggs(jags_samples_1)
-
+```
+The processed otuput can then be passed to the other functions, whose names all start with `ggs_`. The function `ggs_caterpillar` creates what is called a caterpillar plot visualizing the summary statistics for each sampled value:
+```{r}
 ## Create caterpillar plot
 ggs_caterpillar(ggs_1, sort = FALSE)
 ```
 A caterpillar plot is very like a boxplot. It summarizes the distribution of a quantity by plotting the values of certain summary statistics. For each of the sampled values, labelled on the left side, the point represents the posterior mean, the thick bar represents the extents of the 50% interval formed by the 25 and 75%-iles, and the thin bar represents the extents of the 95% interval formed by the 2.5 and 97.5%-iles. This plot very clearly shows the difference between the two groups. All of the sampled means for the first group are near 5 and all of the sampled means for the second group are near 10.
 
-### Passing Data to JAGS
+## Passing Data to JAGS
 
 In most cases, you will want to pass data from `R` into JAGS. Note that the values of `mu1`, `mu2`, and `sigmasq` are specified directly in the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
 
@@ -281,3 +308,4 @@ jags_model_1b <- jags.model("Examples/Example_1/example_1b.jags", jags_data_1b)
 # Generate samples
 jags_samples_1b <- coda.samples(jags_model_1b, c("y1","y2"), n.iter = 100)
 ```
+Try changing the values of `mu1`, `mu2`, and `sigmasq` and see how this affects the results. 
