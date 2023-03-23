@@ -1,6 +1,6 @@
 model{
   ## Distribution of observed data
-  k ~ dbinom(p,n)
+  y ~ dbinom(p,n)
   
   ## Prior distribution
   p ~ dunif(0,1)
