@@ -6,6 +6,13 @@ library(knitr)
 library(ggmcmc)
 ```
 
+
+<center>
+
+![Requisite picture of the Reverand Thomas Bayes required in all texts on Bayesian statistics. Reverand Bayes is credited as the discoverer of Bayes' theorem. According to Wikipedia the portrait probably isn't him and no other images are known.](Figures/Thomas_Bayes.gif){width=300px}
+
+</center>
+
 ## Introduction
 In the previous section, we used JAGS to generate data from a model given set values for the parameters. For example, we simulated the coin tossing experiment by generating values from the binomial distribution given the number of tosses, $n$, and the probability of heads, $p$. We could then learn about the distribution of the data given the values of the parameters.
 
