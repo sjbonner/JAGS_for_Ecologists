@@ -124,9 +124,45 @@ Note that the node for the mean, $\mu_i$, is not strictly necessary. We could ha
 
 ## Basic JAGS syntax
 
-### Example 1 (continued): Two-Sample Problem
+### Example 1 (continued): Coin Tossing
+To introduce the basic syntax of JAGS, we will look at the code for the coin tossing experiment. To make the problem more concrete, I will assume that the coin is fair so that $p=.5$ and that the coin is tossed $n=10$ times (as in the previous `R` code). This is what the JAGS code looks like:
+```{r eval =FALSE, echo=TRUE}
+model{
+  # Parameters
+  p <- .5
+  n <- 10
+  
+  # Distributions
+  y ~ dbinom(p,n)
+}
+```
+This code is also provided in the file `Examples/Example_1/example_1.jags`.
 
-To introduce some of the basic JAGS notation we will look at the code to simulate data from the two-sample setup of Example 1. To make the situation more concrete I will assume that $n_1=10$ and $n_2=1$,  $\mu_1=5$ and $\mu_2=10$, and $\sigma^2=2$. This is what the code looks like:
+Let's break this down.
+
+1) Model Block
+    First, the code must be enclosed in a block of text starting with `model{` at the top of the file and ending with `}`. This may seem a little odd. However, JAGS also allows a second block enclosed by `data{...}` that defines data manipulations that are to be run before the model is run. We will do all of our data manipulations in `R` so we won't need the second block, but you still need to enclose the code with `model{...}` so JAGS knows where to look.
+
+2) Node Definitions
+    Each node in the model is defined by a statement of the form 
+\begin{center}
+`variable <- definition`.
+\end{center}
+or
+\begin{center}
+`variable ~ definition`
+\end{center}
+In this model, $p$ and $n$ are deterministic, so they are defined with `<-` and `y` is deterministic, so it is defined with `~`. 
+
+3) Distributions
+    Each stochastic node must be assigned a distribution. These are defined by functions that all begin with `d` for distribution and accept the names of the parent nodes as arguments. The function `dbinom(n,p)` indicates that `y` follows a binomial distribution with size `n` and probability of success `p`. 
+    
+4) Comments
+    The lines beginning with the hash symbol (`#`) are comments, just as in `R`. These are ignored by JAGS and have no effect on the output. They are simply there to help you or anyone else reading your code.  
+
+### Example 2 (continued): Two-Sample Problem
+
+Now we'll look at the code for the two-sample $t$-test. To make the situation more concrete I will assume that $n_1=10$ and $n_2=1$,  $\mu_1=5$ and $\mu_2=10$, and $\sigma^2=2$. This is what the code looks like:
 ```{r, eval=FALSE, echo = TRUE}
 model{
   # Parameters  
@@ -144,36 +180,16 @@ model{
   }
 }
 ```
-Let's break this down.
+This code is provide in the file `Examples/Example_2/example_2.jags`. Let's break this down. Here is the breakdown:
 
-1) Model Block
-    First, the code must be enclosed in a block of text starting with `model{` at the top of the file and ending with `}`. This may seem a little odd. However, JAGS also allows a second block enclosed by `data{...}` that defines data manipulations that are to be run before the model is run. We will do all of our data manipulations in `R` so we won't need the second block, but you still need to enclose the code with `model{...}` so JAGS knows where to look.
-
-2) Node Definitions
-    Each node in the model is defined by a statement of the form 
-\begin{center}
-`variable <- definition`.
-\end{center}
-or
-\begin{center}
-`variable ~ definition`
-\end{center}
-The first form defines a deterministic node and the second defines a stochastic node. In the example, `mu1`, `mu2`, and `sigmasq` represent the values $\mu_1$, $\mu_2$, and $\sigma^2$ and are defined as stochastic nodes. I have given them specific values to make the code complete. On the other hand, $y1[j]$ and $y2[j]$ representing $Y_{1j}$ and $Y_{2j}$ are defined as stochastic nodes. The function `dnorm()` indicates that they are assigned normal distributions, and the function requires two arguments to complete their definitions: their respective means and their precisions (one over the variance). 
+1) Node Definitions
+    The variables `mu1`, `mu2`, and `sigmasq` represent the values of the parameters $\mu_1$, $\mu_2$, and $\sigma^2$ and are defined as deterministic nodes. On the other hand, $y1[j]$ and $y2[j]$ representing $Y_{1j}$ and $Y_{2j}$ are defined as stochastic nodes. The function `dnorm()` indicates that they are assigned normal distributions, and the function requires two arguments to complete their definitions. The first is the mean and the second is the precision which is equal to the reciprocal of (one over) the variance. 
 
 3) Comments
     The lines beginning with the hash symbol (`#`) are comments, just as in `R`. These are ignored by JAGS and have no effect on the output. 
 
-4) Vector Indexes
-    The square brackets around `j` in the definition of `y1` and `y2` indicate that these nodes form one-dimensional arrays (i.e. vectors) that are indexed by the value of `j`. This is useful for organizing data and repeating structures without having to define new nodes. Arrays of any dimension can be constructed by adding more indices separated by commas. For example, `X1[i,j]` would define `X1` to be a two-dimensional array (a matrix) indexed by `i` and `j`, `X2[i,j,k]` would define `X2` to be a three-dimensional array indexed by `i`, `j`, and `k`, etc. In most cases, JAGS will infer the size of an array from the rest of the code so you do not need to define this explicitly. 
-
-5) Loops
-   The lines
-```{r,echo=TRUE,eval=FALSE}
-for(j in 1:10){
-  y1[j] ~ dnorm(mu1,1/sigmasq)
-}
-```
-create a for loop which defines the repeated structure for the 10 observations from the first group which all have the same distribution. This is not the same as a for loop in `R` which performs sequential calculations. Instead, it is just a convenient way to implement the same structure repeatedly. The model could also have been written with the lines
+4) Loops 
+    The major addition here is the for loop and the use of the square bracket notation. The for loop indicates that the same structure is repeated for many nodes, matching the use of the squares surrounding nodes in the DAGs. The notation for the for loop is the same as in `R` -- but it is not doing the same thing. A for loop in `R` which performs sequential calculations. Instead, it is just a convenient way to implement the same structure repeatedly. The model could also have been written with the lines
 ```{r,echo=TRUE,eval=FALSE}
 y1[1] ~ dnorm(mu1,1/sigmasq)
 y1[2] ~ dnorm(mu1,1/sigmasq)
@@ -186,7 +202,10 @@ y1[8] ~ dnorm(mu1,1/sigmasq)
 y1[9] ~ dnorm(mu1,1/sigmasq)
 y1[10] ~ dnorm(mu1,1/sigmasq)
 ```
-instead, but that is awfully tedious. The second `for` loop defines the distribution of the observations in the second group. 
+instead, but that is awfully tedious (and we only have 10 observations).
+    
+5) Vector Indexes
+    Along with the for loop come the square brackets around `j` in the definition of `y1` and `y2`. This notation indicates that these nodes form one-dimensional arrays (i.e. vectors) that are indexed by the value of `j`. This is the same notation used to define vectors in `R`. This is useful for organizing data and repeating structures without having to define new nodes. Arrays of any dimension can be constructed by adding more indices separated by commas. For example, `X1[i,j]` would define `X1` to be a two-dimensional array (a matrix) indexed by `i` and `j`, `X2[i,j,k]` would define `X2` to be a three-dimensional array indexed by `i`, `j`, and `k`, etc. In most cases, JAGS will infer the size of an array from the rest of the code so you do not need to define this explicitly. E.g., JAGS knows that `y2[]` has 10 elements because of the index on the for loop.
 
 ## Running JAGS from R
 
@@ -203,16 +222,15 @@ The function `jags.model()` compiles the model and adapts the sampler (which we 
 
 ### `coda.samples`()
 
-The function `coda.samples()` runs the model to generate samples from the conditional distributions of the unobserved nodes. The key arguments for this function are:
+There are a couple of functions that allow you to generate samples from a model. I like the function `coda.samples()` because the output is formatted to feed directly into functions to summarize the results (which you will see in the next subsection). The key arguments for this function are:
 
 - `model`: a JAGS model object created with the function `jags.model()`.
 - `variable.names`: a character vector naming the variables whose values you want returned. 
 - `n.iter`: the number of samples to generate (also referred to as the number of iterations)
 
-### Example 1 (continued): Two-Sample Problem
-
-The file `Examples\Example_1\example_1.jags` contains the JAGS the code for the two sample problem. Download the file and save it to your current working directory. You can then run following code to compile the model for the two-sample problem and then generate 100 samples for each of the 25 unobserved variables. Note that you only need to load the `rjags` package once in each `R` session.
-```{r, echo = TRUE, eval = FALSE}
+### Example 1 (continued): Coin Tossing
+The following code with compile the model for the coin tossing example and then return 100 samples. Note that you only need to load the `rjags` package once in each `R` session.
+```{r, echo = TRUE, eval=FALSE}
 # Load rjags
 library(rjags)
 
@@ -220,7 +238,56 @@ library(rjags)
 jags_model_1 <- jags.model("Examples/Example_1/example_1.jags")
 
 # Generate samples
-jags_samples_1 <- coda.samples(jags_model_1, c("y1","y2"), n.iter = 100)
+jags_samples_1 <- coda.samples(jags_model_1, "y", n.iter = 100)
+```
+Copy this code into `R` to run the model. If the model runs successfully then you should see output like this. If you have trouble running the model then I am happy to help!
+```{r, echo = TRUE, eval = FALSE}
+Compiling model graph
+   Resolving undeclared variables
+   Allocating nodes
+Graph information:
+   Observed stochastic nodes: 0
+   Unobserved stochastic nodes: 1
+   Total graph size: 3
+
+Initializing model
+
+  |**************************************************| 100%
+```
+If you print out the object containing the sample like this:
+```{r, eval = FALSE, echo = TRUE}
+jags_samples_1
+```
+then you will see something like this:
+```{r, eval = FALSE, echo = TRUE}
+[[1]]
+Markov Chain Monte Carlo (MCMC) output:
+Start = 1 
+End = 100 
+Thinning interval = 1 
+        y
+  [1,]  4
+  [2,]  3
+  [3,]  3
+  [4,]  6
+  [5,]  5
+  [6,]  5
+  [7,]  6
+  [8,]  4
+  [9,]  7
+ [10,]  6
+```
+The header tells you a bit about how the sampler was run (don't worry about this for now) followed by the sampled values of $y$. The values in your sample will differ because of random variation in the sampling process. You'll see below how we can compute summary statistics from the output. 
+
+### Example 2 (continued): Two-Sample Problem
+
+You can then run following code to compile the model for the two-sample problem and then generate 100 samples for each of the 25 elements of `y1` and `y2`:
+```{r, echo = TRUE, eval = FALSE}
+# Initialize model
+jags_model_2 <- jags.model("Examples/Example_2/example_2.jags")
+
+# Generate samples
+jags_samples_2 <- coda.samples(jags_model_2, c("y1","y2"), n.iter = 100)
 ```
 If the model runs properly then you should see the following output. 
 ```{r, echo = TRUE, eval = FALSE}
@@ -236,6 +303,25 @@ Initializing model
 
   |**************************************************| 100%
 ```
+If you print out the object containing the sample like this:
+```{r, eval = FALSE, echo = TRUE}
+jags_samples_2
+```
+This will print out a very large matrix whose first rows will look something like this:
+```{r, echo = FALSE, eval = TRUE}
+[[1]]
+Markov Chain Monte Carlo (MCMC) output:
+Start = 1 
+End = 100 
+Thinning interval = 1 
+          y1[1]    y1[2]     y1[3]     y1[4]    y1[5]    y1[6]     y1[7]
+  [1,] 6.303602 5.380457  3.546061 6.9884837 5.884908 4.073670 6.4834990
+  [2,] 2.433702 4.914656  4.107135 5.6893832 6.979673 7.130535 5.1671628
+  [3,] 7.402418 6.204997  2.840362 0.9656478 6.968495 3.394275 5.2635536
+  [4,] 7.324964 4.333515  6.151372 5.4581757 4.733221 6.159151 3.3714016
+  [5,] 3.755403 6.504914  4.269162 4.7427323 3.388939 2.982544 4.0687450
+```
+The first column provides the samples generated for `y1[1]`, the second for `y1[2]`, etc. Again, the values in your sample will not be the same because of random variation.
 
 ## Summarizing the Results
 
@@ -254,13 +340,12 @@ The `coda` package contains functions to summarize the samples generated by JAGS
   3) Quantiles 
       The final block provides estimates of the percentiles for each variable. The values in the column labelled `X%` represent the `X`-th percentile of the distribution for that variable -- the value which is greater than exactly `X`% percent of the samples. The 50-th percentile is the median of the distribution.
 
-### Example 1 (continued): Two-Sample Problem
+### Example 2 (continued): Coin Tossing
 ```{r, echo = FALSE, eval = TRUE}
 ## Load saved output
 jags_model_1 <- readRDS("Output/example_1_jags_model.rds")
 jags_samples_1 <- readRDS("Output/example_1_jags_samples.rds")
 ```
-
 The following code loads the `coda` package and then summarizes the results from the previous model. Remember that you only need to load the package once each time you run `R`.
 ```{r, eval = FALSE, echo = TRUE}
 ## Load coda package
@@ -269,22 +354,54 @@ library(coda)
 ## Compute summaries
 summary(jags_samples_1)
 ```
+Copy this code and run it in `R`. The output should look like this:
+```{r}
+Iterations = 1:100
+Thinning interval = 1 
+Number of chains = 1 
+Sample size per chain = 100 
+
+1. Empirical mean and standard deviation for each variable,
+   plus standard error of the mean:
+
+          Mean             SD       Naive SE Time-series SE 
+        5.1100         1.6385         0.1639         0.1639 
+
+2. Quantiles for each variable:
+
+ 2.5%   25%   50%   75% 97.5% 
+    2     4     5     6     8 
+```
+Based on my samples, the mean value of $Y$ was 5.11 and the standard deviation was 1.64. 95% of the observations were between 2 and 8, and the median (the value so that half the observations are below and half are above) was 5. The other entries (Naive SE and Time-series SE) relate to the performance of the sampler, and we will ignore these for now. As before, the values in your output may differ slightly. If we generated enough samples then our results would be exactly the same. 
+
+### Example 1 (continued): Two-Sample Problem
+```{r, echo = FALSE, eval = TRUE}
+## Load saved output
+jags_model_2 <- readRDS("Output/example_2_jags_model.rds")
+jags_samples_2 <- readRDS("Output/example_2_jags_samples.rds")
+```
+
+The following code summarizes simulated data for the two-sample $t$-test: 
+```{r, eval = FALSE, echo = TRUE}
+## Compute summaries
+summary(jags_samples_1)
+```
 For this simple model, we can compute the exact values for these statistics. The true mean and standard deviation for each `y1[j]` are 5 and $\sqrt{2}=1.414$. The true percentiles are 2.228, 4.046, 5.000, 5.954, and 7.772. The true mean and standard deviation for each `y2[j]` are 10 and $\sqrt{2}=1.414$. The true percentiles are 7.228, 9.046, 10.000, 10.954, and 12.772. You should see that the values reported are close, but not exactly equal, to the true values. The reason is that they are computed from a sample which is subject to variation. Each time you run JAGS you will get slightly different output. However, as you increase the number of iterations, the values you see in the summary output should get closer and closer to the truth. 
 
 ### ggmcmc
 
-We can also look at the summary information graphically using the functions in the `ggmcmc` package. The plotting functions in the package require that the output from JAGS first be processed with the functions in `ggs()`. For example:
+It is often helpful to look at the summary statistics graphically, especially if your model contains a large number of functions. We can do this easily using the functions in the `ggmcmc` package. The plotting functions in the package require that the output from JAGS first be processed with the functions in `ggs()`. For example, the following code will load the package and process the output for the second example:
 ```{r}
 ## Load package
 library(ggmcmc)
 
 ## Construct ggs object
-ggs_1 <- ggs(jags_samples_1)
+ggs_2 <- ggs(jags_samples_2)
 ```
 The processed otuput can then be passed to the other functions, whose names all start with `ggs_`. The function `ggs_caterpillar` creates what is called a caterpillar plot visualizing the summary statistics for each sampled value:
 ```{r}
 ## Create caterpillar plot
-ggs_caterpillar(ggs_1, sort = FALSE)
+ggs_caterpillar(ggs_2, sort = FALSE)
 ```
 A caterpillar plot is very like a boxplot. It summarizes the distribution of a quantity by plotting the values of certain summary statistics. For each of the sampled values, labelled on the left side, the point represents the posterior mean, the thick bar represents the extents of the 50% interval formed by the 25 and 75%-iles, and the thin bar represents the extents of the 95% interval formed by the 2.5 and 97.5%-iles. This plot very clearly shows the difference between the two groups. All of the sampled means for the first group are near 5 and all of the sampled means for the second group are near 10.
 
@@ -292,20 +409,24 @@ A caterpillar plot is very like a boxplot. It summarizes the distribution of a q
 
 In most cases, you will want to pass data from `R` into JAGS. Note that the values of `mu1`, `mu2`, and `sigmasq` are specified directly in the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
 
-An easier way to do this is to pass the values of these parameters from `R` into JAGS instead of assigning values to these parameters within the JAGS model file. This is done using the `data` argument of the `jags.model()` function. The value supplied to this argument must be a named list. JAGS will then read these values before it runs the sampler.
+An easier way to do this is to pass the values of these parameters from `R` into JAGS instead of assigning values to these parameters within the JAGS model file. This is done using the `data` argument of the `jags.model()` function. The value supplied to this argument must be a named list. The syntax to create the list is
+```{r}
+list(variable1 = value1, variable2 = value2, ...)
+```
+The names of the variables in the list must match the names of the nodes in the JAGS code. JAGS will then assign the values to these nodes before it runs the sampler.
 
-### Example 1 (continued): Two-Sample Problem
-The file `Examples/Example_1/example_1b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. Instead, you will pass the values of these parameters from `R` into JAGS.
+### Example 2 (continued): Two-Sample Problem
+The file `Examples/Example_1/example_2b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. Instead, you will pass the values of these parameters from `R` into JAGS.
 
-The following code reruns the model from `R`. However, it includes code to construct the list `jags_data_1b` which defines the values of the parameters and then passes this to the function `jags.model()`.  
+The following code reruns the model from `R`. However, it includes code to construct the list `jags_data_2b` which defines the values of the parameters and then passes this to the function `jags.model()`.  
 ```{r, echo = TRUE, eval = FALSE}
 # Construct data list
-jags_data_1b <- list(mu1 = 5, mu2 = 10, sigmasq = 2)
+jags_data_2b <- list(mu1 = 5, mu2 = 10, sigmasq = 2)
 
 # Initialize model
-jags_model_1b <- jags.model("Examples/Example_1/example_1b.jags", jags_data_1b)
+jags_model_2b <- jags.model("Examples/Example_2/example_2b.jags", jags_data_2b)
 
 # Generate samples
-jags_samples_1b <- coda.samples(jags_model_1b, c("y1","y2"), n.iter = 100)
+jags_samples_2b <- coda.samples(jags_model_2b, c("y1","y2"), n.iter = 100)
 ```
 Try changing the values of `mu1`, `mu2`, and `sigmasq` and see how this affects the results. 
