@@ -48,6 +48,8 @@ Simon
 
 ## Setting Up
 
+There are a few things you need to do to get setup for the workshop. If you have already followed the instructions in the e-mail I sent then you can skip to the section below titled Examples. 
+
 ### R and RStudio
 
 I expect that most of you will use RStudio to access R, though you are welcome to use any other development environment. If you have not installed R or RStudio then you will need to download the installers. If you have installed R or RStudio in the past then I recommend that you make sure that you are running the most recent versions. 
@@ -90,7 +92,7 @@ http://www.sourceforge.net/projects/mcmc-jags/files
 
 ### Examples
 
-The code for the examples referenced in this documented is provided is the zip archive available at [https://github.com/sjbonner/JAGS_for_Ecologists/raw/bookdown/Examples.zip](https://github.com/sjbonner/JAGS_for_Ecologists/raw/bookdown/Examples.zip). You will need to download this archive and extract the files in order to access them. I recommend that you save the archive into a new directory on your computer specifically for this workshop
+The code for the examples referenced in this documented is provided is the zip archive available at [https://bonners.ca/simon/jags_for_ecologists/Examples.zip](https://bonners.ca/simon/jags_for_ecologists/Examples.zip). You will need to download this archive and extract the files in order to access them. I recommend that you save the archive into a new directory on your computer specifically for this workshop
 
 ### Working directory
 
