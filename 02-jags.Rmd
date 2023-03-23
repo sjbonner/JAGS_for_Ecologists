@@ -308,7 +308,7 @@ If you print out the object containing the sample like this:
 jags_samples_2
 ```
 This will print out a very large matrix whose first rows will look something like this:
-```{r, echo = FALSE, eval = TRUE}
+```{r, echo = TRUE, eval = FALSE}
 [[1]]
 Markov Chain Monte Carlo (MCMC) output:
 Start = 1 
@@ -355,7 +355,7 @@ library(coda)
 summary(jags_samples_1)
 ```
 Copy this code and run it in `R`. The output should look like this:
-```{r}
+```{r echo=TRUE, eval=FALSE}
 Iterations = 1:100
 Thinning interval = 1 
 Number of chains = 1 
@@ -391,7 +391,7 @@ For this simple model, we can compute the exact values for these statistics. The
 ### ggmcmc
 
 It is often helpful to look at the summary statistics graphically, especially if your model contains a large number of functions. We can do this easily using the functions in the `ggmcmc` package. The plotting functions in the package require that the output from JAGS first be processed with the functions in `ggs()`. For example, the following code will load the package and process the output for the second example:
-```{r}
+```{r echo = TRUE, eval = FALSE}
 ## Load package
 library(ggmcmc)
 
@@ -399,7 +399,7 @@ library(ggmcmc)
 ggs_2 <- ggs(jags_samples_2)
 ```
 The processed otuput can then be passed to the other functions, whose names all start with `ggs_`. The function `ggs_caterpillar` creates what is called a caterpillar plot visualizing the summary statistics for each sampled value:
-```{r}
+```{r echo = TRUE, eval = FALSE}
 ## Create caterpillar plot
 ggs_caterpillar(ggs_2, sort = FALSE)
 ```
@@ -410,13 +410,26 @@ A caterpillar plot is very like a boxplot. It summarizes the distribution of a q
 In most cases, you will want to pass data from `R` into JAGS. Note that the values of `mu1`, `mu2`, and `sigmasq` are specified directly in the model in our current implementation of the two-sample problem. This means that you need to edit the code if you want to generate a new sample with different values of these parameters.
 
 An easier way to do this is to pass the values of these parameters from `R` into JAGS instead of assigning values to these parameters within the JAGS model file. This is done using the `data` argument of the `jags.model()` function. The value supplied to this argument must be a named list. The syntax to create the list is
-```{r}
+```{r echo=TRUE, eval=FALSE}
 list(variable1 = value1, variable2 = value2, ...)
 ```
 The names of the variables in the list must match the names of the nodes in the JAGS code. JAGS will then assign the values to these nodes before it runs the sampler.
 
 ### Example 2 (continued): Two-Sample Problem
-The file `Examples/Example_1/example_2b.jags` reproduces the code for the two-sample problem, except that it excludes the lines that define the values of `mu1`, `mu2`, and `sigma2`. Instead, you will pass the values of these parameters from `R` into JAGS.
+To pass the parameters to the two-sample problem as data we need to remove the lines in the code that set the values of these nodes. The new code will only contain the lines defining the stochastic nodes:
+```{r echo = TRUE, eval=FALSE}
+model{
+  # Distributions
+  for(j in 1:10){
+    y1[j] ~ dnorm(mu1,1/sigmasq)
+  }
+  
+  for(j in 1:15){
+    y2[j] ~ dnorm(mu2,1/sigmasq)
+  }
+}
+```
+This code is provided in the file `Examples/Example_2/example_2b.jags`. 
 
 The following code reruns the model from `R`. However, it includes code to construct the list `jags_data_2b` which defines the values of the parameters and then passes this to the function `jags.model()`.  
 ```{r, echo = TRUE, eval = FALSE}
