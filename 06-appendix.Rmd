@@ -12,3 +12,23 @@
 <!-- 1) There are 75 individuals in the population with at least 1 recessive allele (50 with genotype Bb and 25 with genotype bb). Hence, the probability that a randomly selected individual has 1 recessive allele is $75/100=.75$. -->
 
 <!-- 2) There are 75 individuals with brown eyes in the population (25 with genotype BB and 50 with genotype Bb). Of these, 50 have 1 recessive allele. The probability that a randomly selected individual has 1 recessive allele given that they have brown eyes is $50/75=.67$.  -->
+
+# References
+
+1) Link, W. and Barker, R. (2009) [Bayesian Inference with Ecological Applications](https://www.elsevier.com/books/bayesian-inference/link/978-0-12-374854-6). Elsevier, New York. 
+
+   A great book for ecologists written by two of the leading Bayesian statisticians in the field of ecological staitistics: Dr. William Link (formerly of the USGS) and Dr. Richard Barker (University of Otago, New Zealand). Drs. Link and Barker bring their extensive experience working with ecologists to provide a discussion of Bayesian inference aimed at the level of those analysing data that is grounded in real world examples with accompanying R/JAGS code. 
+
+2) Kruschke, J.K. (2015) [Doing Bayesian Data Analysis: A Tutorial with R, JAGS, and Stan](https://nyu-cdsc.github.io/learningr/assets/kruschke_bayesian_in_R.pdf). 2nd edition. Elsevier, New York. 
+
+   Fondly known as the puppy book because of the cover photo, this book covers Bayesian inference from the ground up for non-statisticians. The text is designed for a general audience, and provides many examples from different fields. It includes worked examples in R and JAGS/Stan with accompanying code. 
+
+3) Gelman, A., Carlin, J.B., Stern, H.S., Dunson, D.B., Vehtari, A., and Rubin, D.B., (2020) [Bayesian Data Analysis](http://www.stat.columbia.edu/~gelman/book/BDA3.pdf). 3rd edition. CRC Press, Boca Raton.
+
+   A rather dense book (both literally and figuratively), this is often considered as the canonical text on Bayesian data analysis. The lead author, Dr. Andrew Gelman, is a professor of Statistics and Political Science at Columbia University, and a prolific researcher in the area of modern Bayesian inference. 
+
+
+
+
+
+ 
