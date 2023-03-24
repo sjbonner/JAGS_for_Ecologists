@@ -9,11 +9,11 @@
 
 ## Markov Chains
 
-To understand how JAGS works, you need to know a little about Markov chains. A Markov chain is a sequence of random events in which the event that occurs at one point in time depends only on the value at the previous point in time. There is a classic example called the drunkard's walk -- which considers a process in two dimensions. For convenience, I'll work with one dimension, so I will call this the drunkard's tightrope. 
+To understand how JAGS works, you need to know a little about Markov chains. A Markov chain is a sequence of random events in which the event that occurs at one point in time depends only on the value at the previous point in time. There is a classic example called the drunkard's walk which considers the movement of a particle (the drunkard) moving randomly in two dimensions. For convenience, I'll work with one dimension, so I will call this the drunkard's tightrope. 
 
-Imagine a drunk (or otherwise inebriated) individual stumbling around on a tightrope. The individual starts in the middle of the tightrope, call it position 0, and every second the individual takes a step in one left or right with equal probability. The location of the individual at one time, call it time $t$, depends only on the location of the individual on the previous time point, $t-1$. Suppose that the individual is at location $x$ at time $t-1$. There are lots of different paths that the individual could have followed to get to that point. However, where they go nest doesn't depend on which path they took. Given that they are at $x$ they will next move to the right, $x+1$, or to the left, $x-1$, with equal probability. 
+Imagine a drunk (or otherwise inebriated) individual stumbling around on a tightrope. The individual starts in the centre of the tightrope, which I will call position 0. I will index positions to the left of centre with negative values (e.g., -1 is one step left of centre, -2 is two steps left of centre) and positions to the right of centre with positive values (e.g., +1 is one tep right of centre and +2 is two steps right of centre). Every second the individual takes a step in one left or right with equal probability. The location of the individual at one time, call it time $t$, depends only on the location of the individual on the previous time point, $t-1$. Suppose that the individual is 5 steps to the right of centre (location +5) after a minute. There are lots of different paths that the individual could have followed to get to that point. However, where they go next doesn't depend on which path they took. Given that they are at +5 after 60 seconds they will either be at +4 or at +6 with equal probabilty after 61 seconds. This is what makes the process a Markov chain. 
 
-Here is an example of one path in the random tightrope over 100 steps. In this case, I have bounded the tightrope between -10 and 10 so that the individual has to go right if they reach -10 and has to go left if they reach 10. 
+The plot below shows and example of one path in the random tightrope over 100 steps. In this case, I have bounded the tightrope between -10 and +10 so that the individual has to go right if they reach -10 and has to go left if they reach +10. 
 ```{r,cache=TRUE}
 ## Draw a drunkards walk
 K <- 100
@@ -58,7 +58,7 @@ walk %>%
 ```
 You can see that the individual spends about the same amount of time at each location, except at the very ends where they spend half as much time. In fact, if we ran this long enough then they would spend exactly the same amount of time for each point from -9 to 9 and exactly half that amount of time at the ends. 
 
-Suppose now that the individual is more likely to move left when they are close to the right side of the rope and vice versa.  Here is the new histogram of the amount of time the individual spends at each location.
+Suppose now that the individual is more likely to move toward the centre of the rope. I.e., they move left when they are close to the right side of the rope and vice versa.  Here is the new histogram of the amount of time the individual spends at each location.
 ```{r,cache=TRUE}
 ## Draw a drunkards walk
 K <- 1e5
@@ -81,7 +81,7 @@ walk %>%
   ggplot(aes(x = x)) +
   geom_histogram(bins = 21)
 ```
-You can see that the individual now spends most of the time in the middle of the rope and less at the sides. If the individual is more likely to go toward the closest endpoint instead then the histogram would look like this.
+You can see that the individual now spends most of the time in the middle of the rope and less at the sides. If the individual is more likely to step in the direction of the closest endpoint instead then the histogram would look like this.
 ```{r,cache=TRUE}
 ## Draw a drunkards walk
 K <- 1e5
@@ -107,16 +107,16 @@ walk %>%
 ```
 In fact, we can make the distribution look like almost anything we want by varying how the probabilities of the different steps depends on the individual's current location.
 
-In essence, this is what JAGS is doing. JAGS is constructing a Markov chain (a random walk) through the space of random variables. However, it is doing it in such a way that the distribution of the points sampled along the random walk matches the distribution of interest.
+In essence, this is what JAGS is doing. JAGS is constructing a Markov chain (a random walk) through the space of random variables. However, it is doing it in such a way that the distribution of the points sampled along the random walk match the distribution of interest.
 
 ## Traceplots
 
-One way to look at this is to create of the sampled values vs the iteration number -- called traceplots. The following code creates traceplots for the two survival probabilities in the last model of the dipper data. 
+One way to look at this is to create plots of the sampled values vs the iteration number -- called traceplots. The following code creates traceplots for the two survival probabilities in the last model of the dipper data. 
 ```{r,echo = TRUE, eval = FALSE}
 ## Create traceplots for survival probabilities
 ggs_traceplot(ggs_7b, family = "psurv")
 ```
-Your plots should look something like this (again they will differ because of random variation in the sampling):
+Your plots should look something like this (again they won't look exactly like this because of random variation in the sampling):
 ```{r,echo = FALSE, eval = TRUE}
 ## Load previous output
 jags_samples_7b <- read_rds("Output/example_7b_jags_samples.rds")
@@ -125,9 +125,9 @@ ggs_7b <- ggs(jags_samples_7b)
 ## Create traceplots for survival probabilities
 ggs_traceplot(ggs_7b, family = "psurv")
 ```
-The trace for each parameter moves up and down within a vertical band bounded by the extents close to the endpoints of the 95% credible intervals for the parameters. Technically, this is called a hairy caterpillar, and it is exactly what you would like to see. It suggests that there is little dependence in the sampled values (i.e., our drunk can leap from one and of the tightrope to the other and anywhere in between at will). This is good because it means that the samples will quickly cover the entire range of the parameters.
+The trace for each parameter moves up and down forming a consistent vertical band. Technically, this is called a hairy caterpillar, and it is exactly what you would like to see. It suggests that there is little dependence in the sampled values (i.e., our drunk can leap from one and of the tightrope to the other and anywhere in between at will). This is good because it means that the samples will quickly cover the entire range of the parameters.
 
-However, your traces will not always be as good as this. Often, you will see something like this instead for one or more of the parameters:
+However, your traces will not always look like this. Often, you will see something like this instead for one or more of the parameters:
 ```{r, eval = TRUE, echo = FALSE}
 ## An ideal trace
 plotdf1 <- tibble(Iteration = 0:999,
