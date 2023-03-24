@@ -26,9 +26,11 @@ library(coda)
 
 ## Welcome!
 
-Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent books on Bayesian statistics, and there is no way that we could cover all of the material in any one in the two hour workshop. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. 
+Welcome to the workshop on Bayesian inference with JAGS for ecologists. The field of Bayesian inference is very extensive with applications in all areas of research. There are many excellent books on topic, and there is no way that we could cover all of the material in any one in the two hour workshop. Instead, I am hoping to provide you with a first look at the subject includes some hands on examples using both R the JAGS software package. I have provided some references on the final page if you are looking for further information.
 
-I have designed the workshop to allow you to work at you own pace. The material is divided into 5 different sections. 
+I have designed the workshop to be interactive. All of the content is provided in this web-book and I will not be giving a formal lecture -- but that doesn't mean that I expect to be idle. Please don't hesitate to ask questions as you work through the material on the following pages. I am here to help!
+
+The workshop is divided into 5 sections:
 
 - Section 1: Getting started
  
@@ -40,17 +42,17 @@ I have designed the workshop to allow you to work at you own pace. The material 
 
 - Section 5: Markov chain Monte Carlo
 
-My hope is that you are able to work through Sections 1-4. Section 5 is a bit more technical and discusses more of what JAGS is doing behind the scenes. However, this is important information if you are going to use JAGS or any of the other MCMC sampling software packages in practice. This is the difference between being able to ask Google Maps for directions and knowing when the directions are correct ([or incorrect](https://www.9news.com.au/world/google-maps-error-leads-demolition-crew-to-the-wrong-house/4b0ea550-88b7-4ca9-982f-5746c2d03027)). 
+My hope is that you are able to work through all of Sections 1-3 and hopefully most of Section 4. I will make the content available for a while, so you will be able to work on this later if you are not able to finish. Section 5 is a bit more technical and discusses more of what JAGS is doing behind the scenes. This is important information if you are going to use JAGS or any of the other MCMC sampling software packages in practice. This is the difference between being able to ask Google Maps for directions and knowing when the directions are correct ([or incorrect](https://www.9news.com.au/world/google-maps-error-leads-demolition-crew-to-the-wrong-house/4b0ea550-88b7-4ca9-982f-5746c2d03027)). 
 
-Please don't hesitate to ask any questions.
+This is the first time that I have lead this workshop, and I expect that there may be some wrinkles. I'd love to hear your feedback. Don't hesitate to speak to me or send me an e-mail [sbonner6@uwo.ca](mailto:sbonner6@uwo.ca) if you have any comments at the end of the workshop or in the days to come. 
 
 Simon
 
 ## Setting Up
 
-There are a few things you need to do to get setup for the workshop. If you have already followed the instructions in the e-mail I sent then you can skip to the section below titled Examples. 
+There are a few things you need to do to get setup for the workshop. If you have already followed the instructions in the e-mail I sent then you can skip to Step 4. 
 
-### R and RStudio
+### Step 1: R and RStudio
 
 I expect that most of you will use RStudio to access R, though you are welcome to use any other development environment. If you have not installed R or RStudio then you will need to download the installers. If you have installed R or RStudio in the past then I recommend that you make sure that you are running the most recent versions. 
 
@@ -60,13 +62,13 @@ I expect that most of you will use RStudio to access R, though you are welcome t
 -RStudio
     You can check for updates of RStudio by selection `Help > Check for Updates` from the menu. The most recent version of RStudio is 2022.12.0 Build 353. You can also download the installer for the most recent version of RStudio from [posit](https://posit.co/downloads/) (the new name of the RStudio company).
     
-### Packages
+### Step 2: Packages
 
 You will need to install `R` packages `coda`, `rjags`, and `ggmcmc` to run the code in this workshop. You can install these with the function `install.packages()` in the `R` console or using the `install` button from the `Packages` pane in `RStudio`. I suggest that you install these now so that you don't get hung up on this later. Let me know if you need any help with this.
 
 I also recommend that you make sure that *all* installed packages are up-to-date. You can do this in RStudio by selecting on the `Packages` tab (in the lower right pane by default) and then clicking on the green circle next to update. If you are asked whether you want to install packages from source because a newer version is available then select "No". This process may take a while if you have may out-dated packages. 
 
-### JAGS
+### Step 3: JAGS
 
 You will also need to install the JAGS software package. Installers for Windows and Mac OS are available from the [JAGS website at SourceForge](https://sourceforge.net/projects/mcmc-jags/files/JAGS/4.x/). If you are running another operating system (Linux) then you will need to check your package repositories to see if a compiled version is available. A list of packages for Ubuntu is available [here](https://packages.ubuntu.com/search?keywords=jags). Otherwise, you will need to compile the source yourself. 
    
@@ -90,11 +92,11 @@ Make sure you have installed JAGS-4.x.y.exe (for any x >=0, y>=0) from
 http://www.sourceforge.net/projects/mcmc-jags/files
 ```
 
-### Examples
+### Step 4: Examples
 
 The code for the examples referenced in this documented is provided is the zip archive available at [https://bonners.ca/simon/jags_for_ecologists/Examples.zip](https://bonners.ca/simon/jags_for_ecologists/Examples.zip). You will need to download this archive and extract the files in order to access them. I recommend that you save the archive into a new directory on your computer specifically for this workshop
 
-### Working directory
+### Step 5: Working directory
 
 You will also need to set your working directory in `R` to the location where you saved the zip archive in order to access the files for the examples. You can set the working directory in `RStudio` using the menu command `Session > Set Working Directory > Choose Directory...` in `RStudio`. Alternatively, you can use the command `setwd()` in the `R` console. 
 
